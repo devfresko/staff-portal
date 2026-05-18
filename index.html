@@ -5521,7 +5521,7 @@
             { lbl: 'Tasks Done Today', val: s.doneTasks || 0, c: 'var(--G)', ib: 'var(--Gl)', ico: 'fa-check-circle', extra: '<div class="kpi-bar-wrap"><div class="kpi-bar" style="width:' + pct + '%"></div></div><div style="font-size:11px;color:var(--tx2);font-weight:600;margin-top:4px">' + pct + '% of ' + (s.totalTasks || 0) + ' tasks</div>' },
             { lbl: 'Pending Tasks', val: s.pendingTasks || 0, c: 'var(--O)', ib: 'var(--Ol)', ico: 'fa-hourglass-half', extra: '' },
             { lbl: 'Overdue Delegations', val: s.overdueDelegations || 0, c: 'var(--R)', ib: 'var(--Rl)', ico: 'fa-triangle-exclamation', extra: '' },
-            { lbl: 'Attendance This Month', val: s.myAttendanceToday || '—', c: 'var(--P)', ib: 'var(--Pl)', ico: 'fa-user-clock', extra: '' }
+            { lbl: 'Attendance This Month', val: (s.presentThisMonth !== undefined ? s.presentThisMonth + ' days' : '—'), c: 'var(--P)', ib: 'var(--Pl)', ico: 'fa-user-clock', extra: '' }
           ].map(function (k) {
             return '<div class="kpi" style="--kc:' + k.c + ';--kib:' + k.ib + '">' +
               '<div class="kpi-ico"><i class="fas ' + k.ico + '"></i></div>' +
@@ -5546,7 +5546,9 @@
             var rand = Math.max(0, (s.doneTasks || 0) + Math.floor(Math.random() * 3 - 1));
             vals.push(i === 0 ? (s.doneTasks || 0) : rand);
           }
-          if (_charts['dashBar']) { _charts['dashBar'].destroy(); }
+          if (_charts['dashBar']) { try { _charts['dashBar'].destroy(); } catch(ce){} }
+          var existingBar = Chart.getChart && Chart.getChart(barEl);
+          if (existingBar) { try { existingBar.destroy(); } catch(ce){} }
           _charts['dashBar'] = new Chart(barEl.getContext('2d'), {
             type: 'bar',
             data: {
@@ -5577,7 +5579,9 @@
           var done = s.doneTasks || 0;
           var pending = s.pendingTasks || 0;
           var total = s.totalTasks || 0;
-          if (_charts['dashDough']) { _charts['dashDough'].destroy(); }
+          if (_charts['dashDough']) { try { _charts['dashDough'].destroy(); } catch(ce){} }
+          var existingDough = Chart.getChart && Chart.getChart(dEl);
+          if (existingDough) { try { existingDough.destroy(); } catch(ce){} }
           _charts['dashDough'] = new Chart(dEl.getContext('2d'), {
             type: 'doughnut',
             data: {

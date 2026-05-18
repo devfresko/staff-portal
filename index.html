@@ -4906,7 +4906,7 @@
         clearTimeout(timer);
         try { delete window[cbName]; } catch(e2) {}
         var s = document.getElementById('_s_' + cbName);
-        if (s) s.parentNode.removeChild(s);
+        if (s && s.parentNode) s.parentNode.removeChild(s);
         if (r && r.success === false && r.error === 'NOT_AUTHENTICATED') {
           _signOut(); return;
         }
@@ -4916,26 +4916,25 @@
       timer = setTimeout(function() {
         try { delete window[cbName]; } catch(e2) {}
         var s = document.getElementById('_s_' + cbName);
-        if (s) s.parentNode.removeChild(s);
+        if (s && s.parentNode) s.parentNode.removeChild(s);
         var e = { message: 'Request timed out. Please try again.' };
         if (onErr) onErr(e); else _toast('Timeout: ' + fn, 'err');
       }, 20000);
 
-      // _U appended just like google.script.run did: (args || []).concat([_U])
-      var fullArgs = (args || []).concat([_U]);
-
+      // Send original args only — passedUser resolved server-side from token
       var payload = encodeURIComponent(JSON.stringify({
-        action: fn, args: fullArgs, token: _TOKEN || ''
+        action: fn,
+        args:   args || [],
+        token:  _TOKEN || ''
       }));
-      var url = GAS_URL + '?callback=' + cbName + '&payload=' + payload;
 
       var s = document.createElement('script');
       s.id  = '_s_' + cbName;
-      s.src = url;
+      s.src = GAS_URL + '?callback=' + cbName + '&payload=' + payload;
       s.onerror = function() {
         clearTimeout(timer);
         try { delete window[cbName]; } catch(e2) {}
-        s.parentNode && s.parentNode.removeChild(s);
+        if (s.parentNode) s.parentNode.removeChild(s);
         var e = { message: 'Network error. Check your connection.' };
         if (onErr) onErr(e); else _toast('Network error', 'err');
       };

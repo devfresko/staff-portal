@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-title" content="Fresko Portal">
   <link rel="manifest" href="manifest.json">
   <link rel="apple-touch-icon" href="icon-180.png">
-  <title>Fresko Staff Portal</title>
+  <title>Fresko Staff Portal — v3.0</title>
 
   <!-- External Assets -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -365,13 +365,8 @@
 
     .l-logo-wrap img {
       height: 58px;
-      width: 160px;
       object-fit: contain;
-      background: #fff;
-      border-radius: 12px;
-      padding: 8px 16px;
       margin: 0 auto;
-      display: block;
     }
 
     .l-logo-wrap .l-logo-fallback {
@@ -669,7 +664,6 @@
 
     .sb-brand img {
       height: 34px;
-      width: 90px;
       object-fit: contain;
       background: #fff;
       padding: 5px 10px;
@@ -2375,7 +2369,7 @@
 ══════════════════════════════════════════════════════════════════════ */
     .att-sum {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      grid-template-columns: repeat(5, 1fr);
       gap: 12px;
       margin-bottom: 20px;
     }
@@ -4310,7 +4304,7 @@
   <div class="scr on" id="sLogin">
     <div class="lbox">
       <div class="l-logo-wrap">
-        <img src="https://lh3.googleusercontent.com/d/1loYf6UxMjjCd5KccAjcTNOo2sXPHe13Y" alt="Fresko Logo"
+        <img src="https://fresko.co.in/wp-content/uploads/2025/08/Untitled-design-21.png" alt="Fresko Logo"
           onerror="this.style.display='none';document.getElementById('lgFallback').style.display='flex'">
         <div class="l-logo-fallback" id="lgFallback" style="display:none">FK</div>
       </div>
@@ -4352,7 +4346,7 @@
     <aside class="sb" id="sb">
       <div class="sb-hd">
         <div class="sb-brand">
-          <img src="https://lh3.googleusercontent.com/d/1loYf6UxMjjCd5KccAjcTNOo2sXPHe13Y" alt="Fresko"
+          <img src="https://fresko.co.in/wp-content/uploads/2025/08/Untitled-design-21.png" alt="Fresko"
             onerror="this.style.display='none'">
           <div>
             <div class="sb-brand-txt">Fresko</div>
@@ -4501,7 +4495,7 @@
       <p>You'll be returned to the login screen. Make sure you've saved any open work.</p>
       <div class="so-btns">
         <button class="btn btn-outline" onclick="_soHide()">Cancel</button>
-        <button class="btn btn-red" onclick="_doSignOut()">
+        <button class="btn btn-red" onclick="location.reload()">
           <i class="fas fa-sign-out-alt"></i> Sign Out
         </button>
       </div>
@@ -4721,8 +4715,8 @@
       return '<span class="bdg ' + (cls[s] || 'bpend') + '">' + _esc(s || '—') + '</span>';
     }
     function _freqBadge(f) {
-      var m = { D: 'freq-d', F: 'freq-w', W: 'freq-w', M: 'freq-m', '2M': 'freq-m', Q: 'freq-m', '4M': 'freq-m', H: 'freq-m', Y: 'freq-m', E1st: 'freq-m', E2nd: 'freq-m', E3rd: 'freq-m', E4th: 'freq-m', ELast: 'freq-m' };
-      var l = { D: 'Daily', F: 'Fortnightly', W: 'Weekly', M: 'Monthly', '2M': 'Bi-Monthly', Q: 'Quarterly', '4M': 'Every 4M', H: 'Half-Yearly', Y: 'Yearly', E1st: '1st Wkday/Mo', E2nd: '2nd Wkday/Mo', E3rd: '3rd Wkday/Mo', E4th: '4th Wkday/Mo', ELast: 'Last Wkday/Mo' };
+      var m = { D: 'freq-d', W: 'freq-w', M: 'freq-m' };
+      var l = { D: 'Daily', W: 'Weekly', M: 'Monthly' };
       return '<span class="bdg ' + (m[f] || 'freq-d') + '">' + (l[f] || f || '?') + '</span>';
     }
 
@@ -4816,12 +4810,6 @@
     ══════════════════════════════════════════════════════════ */
     function _soShow() { document.getElementById('soOv').classList.add('on'); }
     function _soHide() { document.getElementById('soOv').classList.remove('on'); }
-    function _doSignOut() {
-      _U = null; _soHide();
-      var sApp=document.getElementById('sApp'); var sLogin=document.getElementById('sLogin');
-      if(sApp) sApp.classList.remove('on'); if(sLogin) sLogin.classList.add('on');
-      var pw=document.getElementById('fpass'); if(pw) pw.value='';
-    }
 
     /* ══════════════════════════════════════════════════════════
        SIDEBAR MOBILE
@@ -4885,18 +4873,13 @@
     }());
 
     /* ══════════════════════════════════════════════════════════
-       GAS BRIDGE — All backend calls go through _gas()
-       _U is automatically appended as the last argument.
+       GAS BRIDGE — PWA JSONP version
+       Exact same signature as before: _gas(fn, args, onOk, onErr)
+       _U appended automatically, token sent for server-side auth
     ══════════════════════════════════════════════════════════ */
-    // ══════════════════════════════════════════════════════════
-    // PWA API LAYER — JSONP (replaces google.script.run)
-    // Exact same call signature as working GAS version:
-    //   _gas(fn, args, onOk, onErr)
-    //   args are sent as-is, _U appended automatically (like google.script.run did)
-    // ══════════════════════════════════════════════════════════
     var GAS_URL = 'https://script.google.com/macros/s/AKfycbxmGbdW7u9dh3TTpxjw03ZIuC4KPWVmWsrTrsJVk-f5/dev';
     var _cbIdx  = 0;
-    var _TOKEN  = localStorage.getItem('fk_token') || '';
+    var _TOKEN  = '';
 
     function _gas(fn, args, onOk, onErr) {
       var cbName = '_gcb' + (++_cbIdx);
@@ -4904,28 +4887,25 @@
 
       window[cbName] = function(r) {
         clearTimeout(timer);
-        try { delete window[cbName]; } catch(e2) {}
+        try { delete window[cbName]; } catch(x){}
         var s = document.getElementById('_s_' + cbName);
         if (s && s.parentNode) s.parentNode.removeChild(s);
-        if (r && r.success === false && r.error === 'NOT_AUTHENTICATED') {
-          _signOut(); return;
-        }
         if (onOk) onOk(r);
       };
 
       timer = setTimeout(function() {
-        try { delete window[cbName]; } catch(e2) {}
+        try { delete window[cbName]; } catch(x){}
         var s = document.getElementById('_s_' + cbName);
         if (s && s.parentNode) s.parentNode.removeChild(s);
         var e = { message: 'Request timed out. Please try again.' };
         if (onErr) onErr(e); else _toast('Timeout: ' + fn, 'err');
-      }, 20000);
+      }, 25000);
 
-      // Send original args only — passedUser resolved server-side from token
+      // _U appended exactly like google.script.run did
+      var sendArgs = (args || []).concat([_U]);
+
       var payload = encodeURIComponent(JSON.stringify({
-        action: fn,
-        args:   args || [],
-        token:  _TOKEN || ''
+        action: fn, args: sendArgs, token: _TOKEN
       }));
 
       var s = document.createElement('script');
@@ -4933,16 +4913,13 @@
       s.src = GAS_URL + '?callback=' + cbName + '&payload=' + payload;
       s.onerror = function() {
         clearTimeout(timer);
-        try { delete window[cbName]; } catch(e2) {}
+        try { delete window[cbName]; } catch(x){}
         if (s.parentNode) s.parentNode.removeChild(s);
         var e = { message: 'Network error. Check your connection.' };
         if (onErr) onErr(e); else _toast('Network error', 'err');
       };
       document.head.appendChild(s);
     }
-
-    function _gasC(fn, args, onOk, onErr) { _gas(fn, args, onOk, onErr); }
-    function _gasT(fn, args, onOk, onErr) { _gas(fn, args, onOk, onErr); }
 
     /* ══════════════════════════════════════════════════════════
        CSV EXPORT
@@ -5163,37 +5140,62 @@
       errEl.classList.remove('on'); errEl.textContent = '';
 
       if (!email) { errEl.textContent = 'Please enter your email address'; errEl.classList.add('on'); return; }
-      if (!pass) { errEl.textContent = 'Please enter your password'; errEl.classList.add('on'); return; }
+      if (!pass)  { errEl.textContent = 'Please enter your password';      errEl.classList.add('on'); return; }
 
       var btn = document.getElementById('btnLogin');
       btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Signing in...';
       btn.style.opacity = '.65'; btn.style.pointerEvents = 'none';
 
-      _gas('processLogin', [email, pass], function(r) {
+      var cbName = '_loginCb';
+      var timer;
+
+      window[cbName] = function(r) {
+        clearTimeout(timer);
+        try { delete window[cbName]; } catch(x){}
+        var s = document.getElementById('_s_' + cbName);
+        if (s && s.parentNode) s.parentNode.removeChild(s);
+
         btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
         btn.style.opacity = '1'; btn.style.pointerEvents = 'auto';
+
         if (r && r.success && r.user) {
           _U = r.user;
           _TOKEN = r.user.email + ':' + (r.user.role || 'STAFF').toLowerCase();
-          localStorage.setItem('fk_token', _TOKEN);
           _bootApp();
         } else {
           errEl.textContent = (r && r.error) || 'Invalid email or password';
           errEl.classList.add('on');
         }
-      }, function(e) {
+      };
+
+      timer = setTimeout(function() {
+        try { delete window[cbName]; } catch(x){}
         btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
         btn.style.opacity = '1'; btn.style.pointerEvents = 'auto';
-        errEl.textContent = 'Server error. Please try again.';
+        errEl.textContent = 'Server timeout. Please try again.';
         errEl.classList.add('on');
-      });
+      }, 25000);
+
+      var payload = encodeURIComponent(JSON.stringify({
+        action: 'processLogin', args: [email, pass], token: ''
+      }));
+      var s = document.createElement('script');
+      s.id  = '_s_' + cbName;
+      s.src = GAS_URL + '?callback=' + cbName + '&payload=' + payload;
+      s.onerror = function() {
+        clearTimeout(timer);
+        btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
+        btn.style.opacity = '1'; btn.style.pointerEvents = 'auto';
+        errEl.textContent = 'Network error. Check connection.';
+        errEl.classList.add('on');
+      };
+      document.head.appendChild(s);
     }
 
     /* ══════════════════════════════════════════════════════════
        APP BOOTSTRAP
     ══════════════════════════════════════════════════════════ */
-    function _bootApp(user) {
-      if (user) _U = user; // accept user param from PWA login
+    function _bootApp() {
       // Switch screens
       document.getElementById('sLogin').classList.remove('on');
       document.getElementById('sApp').classList.add('on');
@@ -5233,17 +5235,6 @@
       var hr = new Date().getHours();
       var greet = hr < 12 ? 'morning' : hr < 17 ? 'afternoon' : 'evening';
       _addNtf('Good ' + greet + ', ' + (_U.name.split(' ')[0] || '') + '! Have a productive day.', 'fa-sun', 'var(--Ol)', 'var(--O)');
-    }
-
-    // PWA sign-out: clear token + reload to login screen
-    function _signOut() {
-      try { localStorage.removeItem('fk_token'); } catch(e) {}
-      _TOKEN = '';
-      _U = null;
-      document.getElementById('sApp').classList.remove('on');
-      document.getElementById('sLogin').classList.add('on');
-      var pw = document.getElementById('fpw') || document.getElementById('fpass');
-      if (pw) pw.value = '';
     }
     function _loadAnnBadge() {
       _gas('getAnnouncements', [], function (anns) {
@@ -5349,14 +5340,17 @@
 
       var status = res.status || 'not_checked_in';
 
+      // Format datetime for display: "16 May 2026, 04:25:08 PM"
       function _fmtAttTime(hhmm, fullTs) {
+        // fullTs format: "16-05-2026 16:25:08"
         if (fullTs && fullTs.length >= 19) {
           var parts = fullTs.split(' ');
           if (parts.length === 2) {
-            var dp = parts[0].split('-');
+            var dateParts = parts[0].split('-'); // dd-MM-yyyy
+            var timePart  = parts[1];            // HH:mm:ss
             var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-            var mo = months[parseInt(dp[1],10)-1] || dp[1];
-            return dp[2]+' '+mo+' '+dp[0]+', '+parts[1]+' IST';
+            var mo = months[parseInt(dateParts[1], 10) - 1] || dateParts[1];
+            return dateParts[0] + ' ' + mo + ' ' + dateParts[2] + ', ' + timePart + ' IST';
           }
         }
         return hhmm || '—';
@@ -5521,7 +5515,7 @@
             { lbl: 'Tasks Done Today', val: s.doneTasks || 0, c: 'var(--G)', ib: 'var(--Gl)', ico: 'fa-check-circle', extra: '<div class="kpi-bar-wrap"><div class="kpi-bar" style="width:' + pct + '%"></div></div><div style="font-size:11px;color:var(--tx2);font-weight:600;margin-top:4px">' + pct + '% of ' + (s.totalTasks || 0) + ' tasks</div>' },
             { lbl: 'Pending Tasks', val: s.pendingTasks || 0, c: 'var(--O)', ib: 'var(--Ol)', ico: 'fa-hourglass-half', extra: '' },
             { lbl: 'Overdue Delegations', val: s.overdueDelegations || 0, c: 'var(--R)', ib: 'var(--Rl)', ico: 'fa-triangle-exclamation', extra: '' },
-            { lbl: 'Attendance This Month', val: (s.presentThisMonth !== undefined ? s.presentThisMonth + ' days' : '—'), c: 'var(--P)', ib: 'var(--Pl)', ico: 'fa-user-clock', extra: '' }
+            { lbl: 'Attendance This Month', val: s.myAttendanceToday || '—', c: 'var(--P)', ib: 'var(--Pl)', ico: 'fa-user-clock', extra: '' }
           ].map(function (k) {
             return '<div class="kpi" style="--kc:' + k.c + ';--kib:' + k.ib + '">' +
               '<div class="kpi-ico"><i class="fas ' + k.ico + '"></i></div>' +
@@ -5546,9 +5540,7 @@
             var rand = Math.max(0, (s.doneTasks || 0) + Math.floor(Math.random() * 3 - 1));
             vals.push(i === 0 ? (s.doneTasks || 0) : rand);
           }
-          if (_charts['dashBar']) { try { _charts['dashBar'].destroy(); } catch(ce){} }
-          var existingBar = Chart.getChart && Chart.getChart(barEl);
-          if (existingBar) { try { existingBar.destroy(); } catch(ce){} }
+          if (_charts['dashBar']) { _charts['dashBar'].destroy(); }
           _charts['dashBar'] = new Chart(barEl.getContext('2d'), {
             type: 'bar',
             data: {
@@ -5579,9 +5571,7 @@
           var done = s.doneTasks || 0;
           var pending = s.pendingTasks || 0;
           var total = s.totalTasks || 0;
-          if (_charts['dashDough']) { try { _charts['dashDough'].destroy(); } catch(ce){} }
-          var existingDough = Chart.getChart && Chart.getChart(dEl);
-          if (existingDough) { try { existingDough.destroy(); } catch(ce){} }
+          if (_charts['dashDough']) { _charts['dashDough'].destroy(); }
           _charts['dashDough'] = new Chart(dEl.getContext('2d'), {
             type: 'doughnut',
             data: {
@@ -5848,7 +5838,7 @@
       );
     }
 
-        /* ══════════════════════════════════════════════════════════
+    /* ══════════════════════════════════════════════════════════
        CHECKLIST MODULE
     ══════════════════════════════════════════════════════════ */
     var TABS_CHECK = [
@@ -5886,22 +5876,13 @@
     }
 
     function _ctodayForm() {
-      var empFilterHtml = '';
-      if (_isManager()) {
-        empFilterHtml = '<label>Employee:</label>' +
-          '<select id="ckEmp" onchange="_loadToday()" style="min-width:180px">' +
-          '<option value="All">All Employees</option>' +
-          '</select>';
-      } else {
-        empFilterHtml = '<input type="hidden" id="ckEmp" value="' + _U.emp_code + '">';
-      }
-
       return '<div class="fbar">' +
-        empFilterHtml +
-        '<label>From:</label>' +
-        '<input type="date" id="ckFrom" value="' + _today() + '" onchange="_loadToday()">' +
-        '<label>To:</label>' +
-        '<input type="date" id="ckTo" value="' + _today() + '" onchange="_loadToday()">' +
+        '<label>Employee:</label>' +
+        '<select id="ckEmp" onchange="_loadToday()" style="min-width:160px">' +
+        '<option value="' + _U.emp_code + '">' + _esc(_U.name) + ' (Me)</option>' +
+        '</select>' +
+        '<label>Date:</label>' +
+        '<input type="date" id="ckDate" value="' + _today() + '" onchange="_loadToday()">' +
         '<button class="btn btn-sm" onclick="_loadToday()"><i class="fas fa-search"></i> Load</button>' +
         '<div class="fbar-spacer"></div>' +
         '<button class="btn btn-outline btn-sm" onclick="_exportTasks()"><i class="fas fa-download"></i> Export CSV</button>' +
@@ -5925,7 +5906,7 @@
         '<label>From:</label><input type="date" id="histFrom" value="' + _daysAgo(30) + '">' +
         '<label>To:</label><input type="date" id="histTo" value="' + _today() + '">' +
         '<label>Status:</label><select id="histSt"><option value="">All</option><option>Done</option><option>Pending</option></select>' +
-        '<label>Freq:</label><select id="histFreq"><option value="">All</option><optgroup label="Short Cycle"><option value="D">Daily</option><option value="F">Fortnightly</option><option value="W">Weekly</option></optgroup><optgroup label="Monthly Cycle"><option value="M">Monthly</option><option value="2M">Bi-Monthly</option><option value="Q">Quarterly</option><option value="4M">Every 4 Months</option><option value="H">Half-Yearly</option><option value="Y">Yearly</option></optgroup><optgroup label="Nth Weekday"><option value="E1st">1st Weekday/Month</option><option value="E2nd">2nd Weekday/Month</option><option value="E3rd">3rd Weekday/Month</option><option value="E4th">4th Weekday/Month</option><option value="ELast">Last Weekday/Month</option></optgroup></select>' +
+        '<label>Freq:</label><select id="histFreq"><option value="">All</option><option value="D">Daily</option><option value="W">Weekly</option><option value="M">Monthly</option></select>' +
         '<button class="btn btn-sm" onclick="_loadHist()"><i class="fas fa-search"></i> Search</button>' +
         '<div class="fbar-spacer"></div>' +
         '<button class="btn btn-outline btn-sm" onclick="_exportHistory()"><i class="fas fa-download"></i> Export</button>' +
@@ -5933,38 +5914,12 @@
         '<div id="histTable"></div>';
     }
     function _csetupForm() {
-      return '<div class="export-bar" style="margin-bottom:14px; display:flex; justify-content:space-between; align-items:center; background:rgba(0,180,216,0.06); border:1px solid rgba(0,180,216,0.25); border-radius:12px; padding:10px 16px">' +
-        '<span style="font-size:13px; font-weight:700; color:var(--tx)"><i class="fas fa-cogs" style="color:var(--P); margin-right:6px"></i> Recurring Task Scheduling Management</span>' +
-        '<button class="btn btn-sm" id="btnSyncChecklist" onclick="_syncChecklistCalendar()" style="background:var(--P); color:#fff"><i class="fas fa-sync fa-spin-hover"></i> ⚡ Sync Checklist Calendar</button>' +
-        '</div>' +
-        '<div style="display:grid;grid-template-columns:380px 1fr;gap:20px">' +
+      return '<div style="display:grid;grid-template-columns:380px 1fr;gap:20px">' +
         '<div class="card card-nohover card-sm">' +
         '<div class="sec-title" style="margin-bottom:14px"><i class="fas fa-plus-circle" style="color:var(--P)"></i> Add New Task</div>' +
         '<div class="fgrp"><label>Employee <span class="req">★</span></label><select id="csEmp"><option value="">-- Select Employee --</option></select></div>' +
         '<div class="fgrp"><label>Task Name <span class="req">★</span></label><input type="text" id="csTask" placeholder="e.g. Daily Report Submission" maxlength="120"></div>' +
-        '<div class="fgrp"><label>Start Date & Time <span class="req">★</span></label><input type="datetime-local" id="csStartDateTime" value="' + _dateTimeLocal() + '"></div>' +
-        '<div class="fgrp"><label>Frequency <span class="req">★</span></label><select id="csFreq" onchange="_csFreqChg()">' +
-        '<optgroup label="Short Cycle">' +
-        '<option value="D">Daily</option>' +
-        '<option value="F">Fortnightly (Every 2 Weeks)</option>' +
-        '<option value="W">Weekly</option>' +
-        '</optgroup>' +
-        '<optgroup label="Monthly Cycle">' +
-        '<option value="M">Monthly</option>' +
-        '<option value="2M">Bi-Monthly (Every 2 Months)</option>' +
-        '<option value="Q">Quarterly (Every 3 Months)</option>' +
-        '<option value="4M">Every 4 Months</option>' +
-        '<option value="H">Half-Yearly (Every 6 Months)</option>' +
-        '<option value="Y">Yearly</option>' +
-        '</optgroup>' +
-        '<optgroup label="Nth Weekday of Month">' +
-        '<option value="E1st">Every 1st [Weekday] of Month</option>' +
-        '<option value="E2nd">Every 2nd [Weekday] of Month</option>' +
-        '<option value="E3rd">Every 3rd [Weekday] of Month</option>' +
-        '<option value="E4th">Every 4th [Weekday] of Month</option>' +
-        '<option value="ELast">Every Last [Weekday] of Month</option>' +
-        '</optgroup>' +
-        '</select></div>' +
+        '<div class="fgrp"><label>Frequency</label><select id="csFreq" onchange="_csFreqChg()"><option value="D">Daily</option><option value="W">Weekly</option><option value="M">Monthly</option></select></div>' +
         '<div id="csFreqX"></div>' +
         '<button class="btn btn-wide" id="btnSaveTask" onclick="_saveTask()"><i class="fas fa-plus"></i> Add Recurring Task</button>' +
         '</div>' +
@@ -5982,122 +5937,48 @@
       });
     }
 
-    function _calculateStreak(logs) {
-      if (!logs || !logs.length) return 0;
-      var completedDates = new Set();
-      logs.forEach(function(l) {
-        if (l.status === 'Done') {
-          completedDates.add(l.date);
-        }
-      });
-      
-      var streak = 0;
-      var todayStr = _today();
-      var yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      var yesterdayStr = _fmtDateISO(yesterday);
-      
-      if (!completedDates.has(todayStr) && !completedDates.has(yesterdayStr)) {
-        return 0;
-      }
-      
-      var checkDate = completedDates.has(todayStr) ? new Date() : yesterday;
-      while (true) {
-        var checkStr = _fmtDateISO(checkDate);
-        if (completedDates.has(checkStr)) {
-          streak++;
-          checkDate.setDate(checkDate.getDate() - 1);
-        } else {
-          break;
-        }
-      }
-      return streak;
-    }
-
-    function _fmtDateISO(dateObj) {
-      var y = dateObj.getFullYear();
-      var m = String(dateObj.getMonth() + 1).padStart(2, '0');
-      var d = String(dateObj.getDate()).padStart(2, '0');
-      return y + '-' + m + '-' + d;
-    }
-
     function _loadToday() {
       var empSel = document.getElementById('ckEmp');
       var empId = empSel ? empSel.value : _U.emp_code;
-      var fromDate = document.getElementById('ckFrom') ? document.getElementById('ckFrom').value : _today();
-      var toDate = document.getElementById('ckTo') ? document.getElementById('ckTo').value : _today();
+      var date = document.getElementById('ckDate') ? document.getElementById('ckDate').value : _today();
       var listEl = document.getElementById('ckList');
       var progEl = document.getElementById('ckProgress');
       if (!listEl) return;
       listEl.innerHTML = _skel(4, 'sk-h5'); if (progEl) progEl.innerHTML = '';
 
       if (_isManager() && empSel && empSel.options.length <= 1) {
-        _ensureDoersLoaded(function() {
+        _gas('getDoerList', [], function (doers) {
+          _D.doers = doers || [];
+          empSel.innerHTML = doers.map(function (d) {
+            return '<option value="' + _esc(d.emp_id) + '"' + (d.emp_id === _U.emp_code ? ' selected' : '') + '>' + _esc(d.name) + ' (' + _esc(d.department) + ')</option>';
+          }).join('');
           _loadToday();
-        });
+        }, function () { });
         return;
       }
 
-      _gas('getTodayTasks', [empId, fromDate, toDate], function (tasks) {
+      _gas('getTodayTasks', [empId, date], function (tasks) {
         _D.todayTasks = tasks;
         var done = tasks.filter(function (t) { return t.status === 'Done'; }).length;
         var total = tasks.length;
         var pct = total > 0 ? Math.round(done / total * 100) : 0;
 
         if (progEl) {
-          var circularProgress = 
-            '<div style="background:var(--sur); border:1px solid var(--bdr); border-radius:16px; padding:20px; display:flex; align-items:center; justify-content:space-between; gap:20px; box-shadow:0 8px 32px 0 rgba(0,0,0,0.05)">' +
-              '<div style="display:flex; align-items:center; gap:20px">' +
-                '<div style="position:relative; width:80px; height:80px; display:flex; align-items:center; justify-content:center">' +
-                  '<svg style="transform:rotate(-90deg); width:80px; height:80px">' +
-                    '<circle cx="40" cy="40" r="34" stroke="rgba(255,255,255,0.08)" stroke-width="6" fill="transparent" />' +
-                    '<circle cx="40" cy="40" r="34" stroke="url(#checkGrad)" stroke-width="6" fill="transparent"' +
-                            ' stroke-dasharray="213.6" stroke-dashoffset="' + (213.6 - (213.6 * pct / 100)) + '"' +
-                            ' stroke-linecap="round" style="transition: stroke-dashoffset 0.6s ease-in-out" />' +
-                  '</svg>' +
-                  '<svg style="width:0;height:0;position:absolute">' +
-                    '<defs>' +
-                      '<linearGradient id="checkGrad" x1="0%" y1="0%" x2="100%" y2="100%">' +
-                        '<stop offset="0%" stop-color="var(--P)" />' +
-                        '<stop offset="100%" stop-color="var(--G)" />' +
-                      '</linearGradient>' +
-                    '</defs>' +
-                  '</svg>' +
-                  '<span style="position:absolute; font-size:15px; font-weight:800; color:var(--tx)">' + pct + '%</span>' +
-                '</div>' +
-                '<div>' +
-                  '<div style="font-size:15px; font-weight:800; color:var(--tx); margin-bottom:4px">Checklist Progress</div>' +
-                  '<div style="font-size:12px; color:var(--tx2)">' + done + ' of ' + total + ' tasks completed</div>' +
-                '</div>' +
-              '</div>' +
-              '<div style="display:flex; gap:12px; align-items:center">' +
-                '<div style="background:rgba(255,107,0,0.06); border:1px solid rgba(255,107,0,0.2); border-radius:12px; padding:10px 16px; display:flex; align-items:center; gap:10px">' +
-                  '<span style="font-size:20px">🔥</span>' +
-                  '<div>' +
-                    '<div style="font-size:9.5px; text-transform:uppercase; font-weight:700; color:var(--O); letter-spacing:0.5px">Active Streak</div>' +
-                    '<div style="font-size:14px; font-weight:800; color:var(--tx)" id="streakVal">-- Days</div>' +
-                  '</div>' +
-                '</div>' +
-                '<div style="background:rgba(0,180,216,0.06); border:1px solid rgba(0,180,216,0.2); border-radius:12px; padding:10px 16px; display:flex; align-items:center; gap:10px">' +
-                  '<span style="font-size:20px">⏳</span>' +
-                  '<div>' +
-                    '<div style="font-size:9.5px; text-transform:uppercase; font-weight:700; color:var(--Bl); letter-spacing:0.5px">Pending</div>' +
-                    '<div style="font-size:14px; font-weight:800; color:var(--tx)">' + (total - done) + ' Tasks</div>' +
-                  '</div>' +
-                '</div>' +
-              '</div>' +
+          progEl.innerHTML =
+            '<div style="background:var(--sur);border:1px solid var(--bdr);border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:16px">' +
+            '<div style="flex:1">' +
+            '<div style="font-size:13px;font-weight:700;margin-bottom:7px">' + done + ' of ' + total + ' tasks done — ' + pct + '%</div>' +
+            '<div class="pbar-wrap" style="height:8px"><div class="pbar" style="width:' + pct + '%;height:8px;background:' + (pct === 100 ? 'var(--G)' : pct > 50 ? 'var(--O)' : 'var(--R)') + '"></div></div>' +
+            '</div>' +
+            '<div style="display:flex;gap:8px;flex-shrink:0">' +
+            _statusBadge('Done') + '<span style="font-size:13px;font-weight:800">' + done + '</span>' +
+            _statusBadge('Pending') + '<span style="font-size:13px;font-weight:800">' + (total - done) + '</span>' +
+            '</div>' +
             '</div>';
-          progEl.innerHTML = circularProgress;
-
-          _gas('getTaskHistory', [empId === 'All' ? _U.emp_code : empId, _daysAgo(30), _today()], function(logs) {
-            var streak = _calculateStreak(logs);
-            var streakEl = document.getElementById('streakVal');
-            if (streakEl) streakEl.textContent = streak > 0 ? streak + ' Days' : '0 Days';
-          }, function() {});
         }
 
         if (!tasks.length) {
-          listEl.innerHTML = '<div class="empty-state"><i class="fas fa-clipboard-check"></i><h4>No Tasks</h4><p>No tasks scheduled for this selection</p></div>';
+          listEl.innerHTML = '<div class="empty-state"><i class="fas fa-clipboard-check"></i><h4>No Tasks</h4><p>No tasks scheduled for this date</p></div>';
           return;
         }
 
@@ -6108,9 +5989,6 @@
             var icoColor = st === 'Done' ? 'var(--Gl)' : st === 'Holiday' ? '#e0e7ff' : 'var(--bg)';
             var icoFg = st === 'Done' ? 'var(--G)' : st === 'Holiday' ? '#4338ca' : 'var(--O)';
             var ico = st === 'Done' ? 'fa-check-circle' : st === 'Holiday' ? 'fa-umbrella-beach' : st === 'Overdue' ? 'fa-triangle-exclamation' : 'fa-hourglass-half';
-            
-            var dateBadge = fromDate !== toDate ? '<span style="color:var(--P);font-weight:700"><i class="fas fa-calendar"></i> ' + _fmtDateShort(t.planned_dt) + '</span>' : '';
-
             return '<div class="tcard ' + cls + '" id="tc-' + _esc(t.task_uid) + '">' +
               '<div class="tc-ico" style="background:' + icoColor + ';color:' + icoFg + '">' +
               '<i class="fas ' + ico + '"></i>' +
@@ -6120,15 +5998,13 @@
               '<div class="tc-meta">' +
               _freqBadge(t.frequency) +
               (t.emp_name ? '<span style="color:var(--tx2)">' + _esc(t.emp_name) + '</span>' : '') +
-              dateBadge +
-              (t.remarks ? '<span style="color:var(--tx3); font-style:italic">Remarks: ' + _esc(t.remarks) + '</span>' : '') +
               (t.actual_dt ? '<span style="color:var(--G);font-weight:700"><i class="fas fa-check"></i> ' + _fmtDateShort(t.actual_dt) + '</span>' : '') +
               '</div>' +
               '</div>' +
               '<div class="tc-act">' +
               _statusBadge(st) +
               (st !== 'Done' && st !== 'Holiday' ?
-                '<button class="btn btn-green btn-sm" data-uid="' + _esc(t.task_uid) + '" data-dt="' + t.planned_dt + '" onclick="_markDone(this)"><i class="fas fa-check"></i> Done</button>' : '') +
+                '<button class="btn btn-green btn-sm" data-uid="' + _esc(t.task_uid) + '" data-dt="' + date + '" onclick="_markDone(this)"><i class="fas fa-check"></i> Done</button>' : '') +
               '</div>' +
               '</div>';
           }).join('') +
@@ -6139,66 +6015,17 @@
     function _markDone(btn) {
       var uid = btn.getAttribute('data-uid');
       var date = btn.getAttribute('data-dt');
-      var taskCard = btn.closest('.tcard');
-      var taskName = taskCard ? taskCard.querySelector('.tc-name').textContent : 'Checklist Task';
-
-      if (!_D.doers || !_D.doers.length) {
-        _gas('getDoerList', [], function (doers) {
-          _D.doers = doers || [];
-          _openCompletionModal(uid, date, taskName);
-        }, function() {
-          _openCompletionModal(uid, date, taskName);
-        });
-      } else {
-        _openCompletionModal(uid, date, taskName);
-      }
-    }
-
-    function _openCompletionModal(uid, date, taskName) {
-      var buddyOpts = '<option value="">-- No Buddy Verification Required --</option>' +
-        (_D.doers || []).map(function (d) {
-          return '<option value="' + _esc(d.email) + '">' + _esc(d.name) + ' (' + _esc(d.department) + ')</option>';
-        }).join('');
-
-      var body = 
-        '<p style="font-size:13.5px;color:var(--tx2);margin-bottom:16px;line-height:1.5">You are marking the task <strong>' + _esc(taskName) + '</strong> as completed. Please fill out details below.</p>' +
-        '<div class="fgrp">' +
-          '<label style="font-weight:700;margin-bottom:6px;display:block;font-size:12px;color:var(--tx2)">Verification Buddy (Optional)</label>' +
-          '<select id="compBuddy" style="width:100%;padding:10px;border-radius:8px;border:1.5px solid var(--bdr);background:var(--bg);color:var(--tx);font-size:13px;outline:none">' + buddyOpts + '</select>' +
-        '</div>' +
-        '<div class="fgrp" style="margin-top:14px">' +
-          '<label style="font-weight:700;margin-bottom:6px;display:block;font-size:12px;color:var(--tx2)">Remarks / Notes <span class="req">★</span></label>' +
-          '<textarea id="compRemarks" rows="3" placeholder="Explain what was done or notes on execution..." style="width:100%;padding:10px;border-radius:8px;border:1.5px solid var(--bdr);background:var(--bg);color:var(--tx);font-family:inherit;font-size:13px;outline:none"></textarea>' +
-        '</div>';
-
-      _openModal(
-        '<i class="fas fa-check-circle" style="color:var(--G)"></i> Complete Task',
-        body,
-        function() {
-          var buddy = document.getElementById('compBuddy') ? document.getElementById('compBuddy').value : '';
-          var remText = document.getElementById('compRemarks') ? document.getElementById('compRemarks').value.trim() : '';
-          
-          if (!remText) {
-            _toast('Remarks are required to log completion!', 'err');
-            return;
-          }
-          
-          var finalRemarks = remText;
-          if (buddy) {
-            finalRemarks += " [Buddy: " + buddy + "]";
-          }
-          
-          _closeModal();
-          _gas('markTaskDone', [uid, date, finalRemarks], function () {
-            _toast('Task completed successfully!', 'ok');
-            _addNtf('Completed: ' + taskName, 'fa-check-circle', 'var(--Gl)', 'var(--G)');
-            _loadToday();
-          }, function (e) {
-            _toast('Error completing task: ' + e.message, 'err');
-          });
-        },
-        '<i class="fas fa-check"></i> Submit'
-      );
+      btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>';
+      btn.disabled = true;
+      _gas('markTaskDone', [uid, date, ''], function () {
+        _toast('Task marked as done!', 'ok');
+        _addNtf('Task completed!', 'fa-check-circle', 'var(--Gl)', 'var(--G)');
+        _loadToday();
+      }, function (e) {
+        _toast('Error: ' + e.message, 'err');
+        btn.innerHTML = '<i class="fas fa-check"></i> Done';
+        btn.disabled = false;
+      });
     }
 
     function _loadWeek() {
@@ -6210,10 +6037,10 @@
       grid.innerHTML = _skel(2, 'sk-h8');
 
       if (_isManager() && document.getElementById('ckWEmp') && document.getElementById('ckWEmp').options.length <= 1) {
-        _ensureDoersLoaded(function() {
-          _loadWeek();
-        });
-        return;
+        _gas('getDoerList', [], function (doers) {
+          var sel = document.getElementById('ckWEmp');
+          if (sel) sel.innerHTML = doers.map(function (d) { return '<option value="' + _esc(d.emp_id) + '"' + (d.emp_id === _U.emp_code ? ' selected' : '') + '>' + _esc(d.name) + '</option>'; }).join('');
+        }, function () { });
       }
 
       _gas('getWeeklyTasks', [empId, wk], function (days) {
@@ -6225,7 +6052,7 @@
             var isWkend = day.day === 'Sat' || day.day === 'Sun';
             var done = day.tasks.filter(function (t) { return t.status === 'Done'; }).length;
             var pct = day.tasks.length > 0 ? Math.round(done / day.tasks.length * 100) : 0;
-            return '<div class="wkday' + (isToday ? ' today' : '') + (isWkend ? ' weekend' : '') + '" onclick="_inspectDayChecklist(\'' + day.date + '\', \'' + day.day + '\', \'' + empId + '\')" style="cursor:pointer" title="Click to inspect this day">' +
+            return '<div class="wkday' + (isToday ? ' today' : '') + (isWkend ? ' weekend' : '') + '">' +
               '<div class="wkday-hd">' + _esc(day.day) + '<br><span style="font-size:9px;font-weight:500">' + _fmtDateShort(day.date) + '</span></div>' +
               '<div style="font-size:10px;font-weight:800;color:' + (day.tasks.length ? (pct === 100 ? 'var(--G)' : 'var(--P)') : 'var(--tx3)') + ';margin-bottom:4px">' + done + '/' + day.tasks.length + '</div>' +
               '<div class="wkday-tasks">' +
@@ -6238,52 +6065,6 @@
               '</div>';
           }).join('') +
           '</div>';
-      });
-    }
-
-    function _inspectDayChecklist(date, dayLabel, empId) {
-      _openModal(
-        '<i class="fas fa-calendar-day" style="color:var(--P)"></i> Checklist: ' + dayLabel + ' (' + _fmtDateShort(date) + ')',
-        '<div id="dayInspectList" style="min-width:320px">' + _skel(3, 'sk-h5') + '</div>',
-        null,
-        ''
-      );
-      
-      _gas('getTodayTasks', [empId, date], function(tasks) {
-        var el = document.getElementById('dayInspectList');
-        if (!el) return;
-        if (!tasks || !tasks.length) {
-          el.innerHTML = '<div class="empty-state"><i class="fas fa-clipboard-check"></i><h4>No Tasks</h4><p>No tasks scheduled for this day</p></div>';
-          return;
-        }
-        
-        el.innerHTML = '<div style="display:flex; flex-direction:column; gap:10px; max-height:400px; overflow-y:auto; padding-right:4px; margin-top:10px">' +
-          tasks.map(function(t) {
-            var st = t.status || 'Pending';
-            var badge = _statusBadge(st);
-            
-            var actHtml = '';
-            if (st !== 'Done' && st !== 'Holiday') {
-              actHtml = '<button class="btn btn-green btn-xs" onclick="_closeModal(); setTimeout(function(){ _openCompletionModal(\'' + _esc(t.task_uid) + '\', \'' + date + '\', \'' + _esc(t.task_name) + '\') }, 200)"><i class="fas fa-check"></i> Complete</button>';
-            } else if (t.remarks) {
-              actHtml = '<div style="font-size:10.5px; color:var(--tx3); margin-top:4px; font-style:italic">Remarks: ' + _esc(t.remarks) + '</div>';
-            }
-            
-            return '<div style="background:var(--sur); border:1px solid var(--bdr); border-radius:10px; padding:12px; display:flex; flex-direction:column; gap:6px">' +
-              '<div style="display:flex; justify-content:space-between; align-items:center">' +
-                '<div style="font-weight:700; font-size:13px; color:var(--tx); flex:1; padding-right:10px">' + _esc(t.task_name) + '</div>' +
-                '<div>' + badge + '</div>' +
-              '</div>' +
-              '<div style="display:flex; justify-content:space-between; align-items:center; margin-top:2px">' +
-                '<div style="font-size:11px; color:var(--tx2)">' + _freqBadge(t.frequency) + '</div>' +
-                '<div>' + actHtml + '</div>' +
-              '</div>' +
-            '</div>';
-          }).join('') +
-          '</div>';
-      }, function(e) {
-        var el = document.getElementById('dayInspectList');
-        if (el) el.innerHTML = '<div class="te">Error: ' + _esc(e.message) + '</div>';
       });
     }
 
@@ -6344,99 +6125,53 @@
       if (!el) return;
       el.innerHTML = _skel(3, 'sk-h4');
 
-      function _fetchAndRenderTasks() {
-        _gas('getTaskSetup', [], function (tasks) {
-          if (!el) return;
-          if (!tasks || !tasks.length) {
-            el.innerHTML = '<div class="te"><i class="fas fa-tasks"></i>No active tasks configured</div>';
-            return;
-          }
-          el.innerHTML =
-            '<div style="font-size:12px;font-weight:700;color:var(--tx2);margin-bottom:10px">' + tasks.length + ' active task(s) configured</div>' +
-            '<div style="display:flex;flex-direction:column;gap:6px">' +
-            tasks.map(function (t) {
-              return '<div style="background:var(--bg);border:1px solid var(--bdr);border-radius:9px;padding:9px 12px;display:flex;align-items:center;gap:10px">' +
-                '<div style="flex:1;min-width:0">' +
-                '<div style="font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _esc(t.task_name) + '</div>' +
-                '<div style="font-size:10.5px;color:var(--tx2);margin-top:2px;display:flex;align-items:center;gap:8px">' +
-                '<span>' + _esc(t.emp_name) + '</span>' +
-                '<span>·</span>' +
-                '<span>' + _esc(t.dept) + '</span>' +
-                _freqBadge(t.frequency) +
-                '</div>' +
-                '</div>' +
-                '<button class="btn btn-red btn-xs" data-uid="' + _esc(t.task_uid) + '" onclick="_deleteRecurringTask(this)" title="Delete Recurring Task"><i class="fas fa-trash"></i></button>' +
-                '</div>';
-            }).join('') +
-            '</div>';
-        }, function(e) {
-          if (el) el.innerHTML = '<div class="te"><i class="fas fa-exclamation-triangle"></i> Error loading tasks: ' + _esc(e.message) + '</div>';
-        });
+      if (_isManager() && document.getElementById('csEmp') && document.getElementById('csEmp').options.length <= 1) {
+        _gas('getDoerList', [], function (doers) {
+          _D.doers = doers;
+          var sel = document.getElementById('csEmp');
+          if (sel) sel.innerHTML = '<option value="">-- Select Employee --</option>' +
+            doers.map(function (d) {
+              return '<option value="' + _esc(d.emp_id) + '" data-dept="' + _esc(d.department) + '">' + _esc(d.name) + ' (' + _esc(d.department) + ')</option>';
+            }).join('');
+        }, function () { });
       }
 
-      if (_isManager()) {
-        if (!_D.doers || !_D.doers.length) {
-          _ensureDoersLoaded(function() { _fetchAndRenderTasks(); });
-        } else {
-          _populateDoerDropdowns(_D.doers);
-          _fetchAndRenderTasks();
-        }
-      } else {
-        _fetchAndRenderTasks();
-      }
-    }
-
-    function _syncChecklistCalendar() {
-      var btn = document.getElementById('btnSyncChecklist');
-      if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Syncing...';
-      }
-      _gas('portalGenerateChecklist', [], function () {
-        if (btn) {
-          btn.disabled = false;
-          btn.innerHTML = '<i class="fas fa-sync"></i> ⚡ Sync Checklist Calendar';
-        }
-        _toast('Checklist Calendar synced successfully!', 'ok');
-        _addNtf('Calendar Synced', 'fa-sync', 'var(--Pl)', 'var(--P)');
-        _loadSetupTasks();
-      }, function (e) {
-        if (btn) {
-          btn.disabled = false;
-          btn.innerHTML = '<i class="fas fa-sync"></i> ⚡ Sync Checklist Calendar';
-        }
-        _toast('Sync failed: ' + e.message, 'err');
+      _gas('getDeptTasks', ['All', _today()], function (tasks) {
+        var seen = {}; var list = [];
+        tasks.forEach(function (t) { if (!seen[t.task_uid]) { seen[t.task_uid] = true; list.push(t); } });
+        if (!list.length) { el.innerHTML = '<div class="te"><i class="fas fa-tasks"></i>No active tasks configured</div>'; return; }
+        el.innerHTML =
+          '<div style="font-size:12px;font-weight:700;color:var(--tx2);margin-bottom:10px">' + list.length + ' active tasks configured</div>' +
+          '<div style="display:flex;flex-direction:column;gap:6px">' +
+          list.map(function (t) {
+            return '<div style="background:var(--bg);border:1px solid var(--bdr);border-radius:9px;padding:9px 12px;display:flex;align-items:center;gap:10px">' +
+              '<div style="flex:1;min-width:0">' +
+              '<div style="font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _esc(t.task_name) + '</div>' +
+              '<div style="font-size:10.5px;color:var(--tx2);margin-top:2px;display:flex;align-items:center;gap:8px">' +
+              '<span>' + _esc(t.emp_name) + '</span>' +
+              '<span>·</span>' +
+              '<span>' + _esc(t.dept) + '</span>' +
+              _freqBadge(t.frequency) +
+              '</div>' +
+              '</div>' +
+              '<button class="btn btn-red btn-xs" data-uid="' + _esc(t.task_uid) + '" onclick="_deactivateTask(this)" title="Deactivate"><i class="fas fa-times"></i></button>' +
+              '</div>';
+          }).join('') +
+          '</div>';
       });
-    }
-
-    function _deleteRecurringTask(btn) {
-      var uid = btn.getAttribute('data-uid');
-      _openModal(
-         '<i class="fas fa-trash" style="color:var(--R)"></i> Delete Recurring Task',
-        '<p style="font-size:14px;color:var(--tx2);line-height:1.6">Wipe out this recurring task template and <strong>all its pending planned calendar instances</strong>? This action will clean up both sheets in one go.</p>',
-        function () {
-          _closeModal();
-          _gas('portalDeleteTask', [uid], function () {
-            _toast('Recurring task deleted globally!', 'ok');
-            _loadSetupTasks();
-          }, function (e) {
-            _toast('Error deleting task: ' + e.message, 'err');
-          });
-        },
-        '<i class="fas fa-trash"></i> Delete'
-      );
     }
 
     function _csFreqChg() {
       var freq = document.getElementById('csFreq') ? document.getElementById('csFreq').value : 'D';
       var ex = document.getElementById('csFreqX');
       if (!ex) return;
-      var DOW_OPTS = '<select id="csDow"><option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option><option value="0">Sunday</option></select>';
       if (freq === 'W') {
-        ex.innerHTML = '<div class="fgrp"><label>Day of Week</label>' + DOW_OPTS + '</div>';
-      } else if (freq === 'E1st' || freq === 'E2nd' || freq === 'E3rd' || freq === 'E4th' || freq === 'ELast') {
-        ex.innerHTML = '<div class="fgrp"><label>Which Weekday</label>' + DOW_OPTS + '</div>';
-      } else if (freq === 'M' || freq === '2M' || freq === 'Q' || freq === '4M' || freq === 'H' || freq === 'Y') {
+        ex.innerHTML = '<div class="fgrp"><label>Day of Week</label>' +
+          '<select id="csDow">' +
+          '<option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option>' +
+          '<option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option><option value="0">Sunday</option>' +
+          '</select></div>';
+      } else if (freq === 'M') {
         ex.innerHTML = '<div class="fgrp"><label>Day of Month (1–31)</label><input type="number" id="csDom" min="1" max="31" value="1"></div>';
       } else {
         ex.innerHTML = '';
@@ -6448,58 +6183,22 @@
       var sel = document.getElementById('csEmp');
       var taskInp = document.getElementById('csTask');
       var freqSel = document.getElementById('csFreq');
-      var startDtInp = document.getElementById('csStartDateTime');
-      
       var empId = sel ? sel.value : '';
       var empOpt = sel ? sel.options[sel.selectedIndex] : null;
       var empName = empOpt ? empOpt.text : '';
       var dept = empOpt ? (empOpt.getAttribute('data-dept') || '') : '';
       var task = taskInp ? taskInp.value.trim() : '';
       var freq = freqSel ? freqSel.value : 'D';
-      var startDateVal = startDtInp ? startDtInp.value : '';
-      
-      if (!_req(empId, 'Employee') || !_req(task, 'Task Name') || !_req(startDateVal, 'Start Date & Time')) { 
-        _endSub('btnSaveTask'); 
-        return; 
-      }
-      
-      var obj = { 
-        emp_id: empId, 
-        emp_name: empName, 
-        dept: dept, 
-        task_name: task, 
-        frequency: freq,
-        start_date: startDateVal
-      };
-      var E_FREQS = ['E1st', 'E2nd', 'E3rd', 'E4th', 'ELast'];
-      var DOM_FREQS = ['M', '2M', 'Q', '4M', 'H', 'Y'];
-      if (freq === 'W' || E_FREQS.indexOf(freq) > -1) {
-        obj.day_of_week = document.getElementById('csDow') ? Number(document.getElementById('csDow').value) : 1;
-      }
-      if (DOM_FREQS.indexOf(freq) > -1) {
-        obj.day_of_month = document.getElementById('csDom') ? Number(document.getElementById('csDom').value) : 1;
-      }
-      
-      var btn = document.getElementById('btnSaveTask');
-      if (btn) { btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Saving & Generating...'; }
-
+      if (!_req(empId, 'Employee') || !_req(task, 'Task Name')) { _endSub('btnSaveTask'); return; }
+      var obj = { emp_id: empId, emp_name: empName, dept: dept, task_name: task, frequency: freq };
+      if (freq === 'W') obj.day_of_week = document.getElementById('csDow') ? Number(document.getElementById('csDow').value) : 1;
+      if (freq === 'M') obj.day_of_month = document.getElementById('csDom') ? Number(document.getElementById('csDom').value) : 1;
       _gas('saveNewTask', [obj], function (r) {
         _endSub('btnSaveTask');
-        if (btn) btn.innerHTML = '<i class="fas fa-plus"></i> Add Recurring Task';
-        if (r.checklist_error) {
-          _toast('Task saved (' + r.task_uid + ') but checklist generation failed: ' + r.checklist_error, 'err');
-        } else {
-          _toast('Task saved & checklist entries generated! (' + r.task_uid + ')', 'ok');
-        }
+        _toast('Task added: ' + r.task_uid, 'ok');
         if (taskInp) taskInp.value = '';
-        var dtInp = document.getElementById('csStartDateTime');
-        if (dtInp) dtInp.value = _dateTimeLocal();
         _loadSetupTasks();
-      }, function (e) {
-        _endSub('btnSaveTask');
-        if (btn) btn.innerHTML = '<i class="fas fa-plus"></i> Add Recurring Task';
-        _toast('Error saving task: ' + e.message, 'err');
-      });
+      }, function (e) { _endSub('btnSaveTask'); _toast('Error: ' + e.message, 'err'); });
     }
     function _deactivateTask(btn) {
       var uid = btn.getAttribute('data-uid');
@@ -6524,27 +6223,26 @@
     function _vDeleg() {
       var showAll = _isManager();
       var at = _ST || 'dmine';
-      if (!showAll && (at === 'dcr' || at === 'dall')) at = 'dmine';
-      var tabs = showAll ? TABS_DELEG : TABS_DELEG.filter(function (t) { return t.id !== 'dall' && t.id !== 'dcr'; });
+      var tabs = showAll ? TABS_DELEG : TABS_DELEG.filter(function (t) { return t.id !== 'dall'; });
 
       document.getElementById('content').innerHTML =
         '<div class="mod-head">' +
         '<div><div class="mod-title">Delegation</div><div class="mod-sub">Task assignments, follow-ups & escalations</div></div>' +
-        (showAll ? '<button class="btn btn-sm" onclick="_goDCr()"><i class="fas fa-plus"></i> Delegate Task</button>' : '') +
+        '<button class="btn btn-sm" onclick="_goDCr()"><i class="fas fa-plus"></i> Delegate Task</button>' +
         '</div>' +
         _mkTabs(tabs, at) +
         _mkPanes(tabs, at, [
           '<div id="dminePane">' + _skel(3, 'sk-h5') + '</div>',
           '<div id="doutPane">' + _skel(3, 'sk-h5') + '</div>',
-          (showAll ? '<div id="dcrPane">' + _dcrForm() + '</div>' : ''),
-          (showAll ? '<div id="dallPane">' + _skel(3) + '</div>' : '')
+          '<div id="dcrPane">' + _dcrForm() + '</div>',
+          '<div id="dallPane">' + (showAll ? _skel(3) : '') + '</div>'
         ]);
 
-      if (showAll) _loadDelegDoers();
+      _loadDelegDoers();
       if (at === 'dmine') _loadDMine();
       else if (at === 'dout') _loadDOut();
       else if (at === 'dall' && showAll) _loadDAll();
-      if (_ST) setTimeout(function () { _switchTab(at); }, 30);
+      if (_ST) setTimeout(function () { _switchTab(_ST); }, 30);
     }
 
     function _loadDelegDoers() {
@@ -6622,182 +6320,62 @@
         el.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><h4>No Delegation Tasks</h4><p>Nothing to display here right now.</p></div>';
         return;
       }
-      
-      var prefix = el.id || 'del';
       var done = dels.filter(function (d) { return d.status === 'Completed'; }).length;
-      var activeDels = dels.filter(function (d) { return d.status !== 'Completed'; });
-      var completedDels = dels.filter(function (d) { return d.status === 'Completed'; });
       var ovr = dels.filter(function (d) { return d.is_overdue && d.status !== 'Completed'; }).length;
 
-      var renderCard = function(d) {
-        var effStatus = d.is_overdue && d.status !== 'Completed' ? 'Overdue' : d.status;
-        var cls = d.status === 'Completed' ? 'done' : d.is_overdue ? 'overdue' : d.status === 'Shifted' ? 'shifted' : d.status === 'Cancelled' ? 'cancelled' : '';
-        var dl = _dl(d.final_date);
-        var dlTxt = dl === null ? '' :
-          dl < 0 ? '<span style="color:var(--R);font-weight:800"><i class="fas fa-triangle-exclamation"></i> Overdue by ' + Math.abs(dl) + 'd</span>' :
-            dl === 0 ? '<span style="color:var(--O);font-weight:800"><i class="fas fa-clock"></i> Due Today</span>' :
-              '<span style="color:var(--tx3)"><i class="fas fa-calendar"></i> Due in ' + dl + 'd</span>';
-        
-        var escBadge = (dl < 0 && Math.abs(dl) > 3 && d.status !== 'Completed') ? 
-          '<span class="bdg" style="background:var(--Rl);color:var(--R);font-weight:900;border:1px solid var(--R);padding:2px 6px;margin-left:6px;animation:pulse 1.5s infinite"><i class="fas fa-exclamation-triangle"></i> ESCALATED</span>' : '';
-        
-        var timelineHtml = '';
-        if (d.revision_1) {
-          timelineHtml = '<div style="margin-top:10px;padding:10px;background:var(--sur);border-radius:8px;border:1px dashed var(--bdr);font-size:11.5px">' +
-            '<div style="font-weight:700;color:var(--tx2);margin-bottom:6px"><i class="fas fa-history"></i> Date Shift Timeline</div>' +
-            '<div style="display:flex;flex-direction:column;gap:5px">' +
-            '<div style="display:flex;align-items:center;gap:6px"><span style="width:6px;height:6px;background:var(--tx3);border-radius:50%"></span><span style="color:var(--tx3)">Original Due:</span> <strong style="color:var(--tx2)">' + _fmtDate(d.first_date) + '</strong></div>' +
-            '<div style="display:flex;align-items:center;gap:6px"><span style="width:6px;height:6px;background:var(--V);border-radius:50%"></span><span style="color:var(--V)">Shift 1:</span> <strong style="color:var(--V)">' + _fmtDate(d.revision_1) + '</strong></div>';
-          if (d.revision_2) {
-            timelineHtml += '<div style="display:flex;align-items:center;gap:6px"><span style="width:6px;height:6px;background:var(--O);border-radius:50%"></span><span style="color:var(--O)">Shift 2 (Final):</span> <strong style="color:var(--O)">' + _fmtDate(d.revision_2) + '</strong></div>';
-          }
-          timelineHtml += '</div></div>';
-        }
-
-        var photoHtml = '';
-        if (d.status === 'Completed' && d.photo_url) {
-          photoHtml = '<div style="margin-top:10px">' +
-            '<div style="font-size:11px;font-weight:700;color:var(--tx3);margin-bottom:4px"><i class="fas fa-paperclip"></i> Proof of Work</div>' +
-            '<img src="' + _esc(d.photo_url) + '" onclick="_inspectPhoto(\'' + _esc(d.photo_url) + '\')" style="width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid var(--bdr);cursor:zoom-in;transition:transform 0.2s" class="zoom-hover">' +
-            '</div>';
-        }
-
-        return '<div class="dcard ' + cls + '">' +
-          '<div class="dc-top">' +
-          '<div class="dc-desc">' + _esc(d.task_desc) + '</div>' +
-          '<div style="display:flex;align-items:center">' + _statusBadge(effStatus) + escBadge + '</div>' +
-          '</div>' +
-          '<div class="dc-meta">' +
-          (isOut ?
-            '<span><i class="fas fa-user-check"></i> To: <strong>' + _esc(d.delegated_to_name) + '</strong></span>' :
-            '<span><i class="fas fa-user"></i> By: <strong>' + _esc(d.delegated_by_name) + '</strong></span>') +
-          '<span><i class="fas fa-calendar-plus"></i> ' + _fmtDate(d.first_date) + '</span>' +
-          '<span><i class="fas fa-flag-checkered"></i> ' + _fmtDate(d.final_date) + '</span>' +
-          (d.status !== 'Completed' ? '<span>' + dlTxt + '</span>' : '') +
-          '</div>' +
-          timelineHtml +
-          photoHtml +
-          '<div class="dc-act">' +
-          (!isOut && d.status !== 'Completed' && d.status !== 'Cancelled' ?
-            '<button class="btn btn-green btn-sm" data-tid="' + _esc(d.task_id) + '" onclick="_dComplete(this)"><i class="fas fa-check"></i> Mark Complete</button>' +
-            '<button class="btn btn-outline btn-sm" data-tid="' + _esc(d.task_id) + '" onclick="_dShift(this)"><i class="fas fa-calendar-days"></i> Request Shift</button>' : '') +
-          (isOut && d.status !== 'Completed' && d.status !== 'Cancelled' ?
-            '<button class="btn btn-outline btn-sm" data-tid="' + _esc(d.task_id) + '" onclick="_dCancel(this)"><i class="fas fa-times"></i> Cancel</button>' : '') +
-          '</div>' +
-          '</div>';
-      };
-
-      var headerHtml = 
+      el.innerHTML =
         '<div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">' +
         '<div class="chip"><i class="fas fa-list"></i> Total: ' + dels.length + '</div>' +
-        '<div class="chip" style="background:var(--Ol);color:var(--O)"><i class="fas fa-clock"></i> Active: ' + activeDels.length + '</div>' +
         '<div class="chip" style="background:var(--Gl);color:var(--G)"><i class="fas fa-check-circle"></i> Done: ' + done + '</div>' +
         (ovr > 0 ? '<div class="chip" style="background:var(--Rl);color:var(--R)"><i class="fas fa-triangle-exclamation"></i> Overdue: ' + ovr + '</div>' : '') +
-        '</div>';
-
-      var controlBarHtml = 
-        '<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">' +
-        '<button class="btn btn-outline btn-xs" onclick="_toggleAllDateGroups(\'' + prefix + '\', true)"><i class="fas fa-expand-arrows-alt"></i> Expand All</button>' +
-        '<button class="btn btn-outline btn-xs" onclick="_toggleAllDateGroups(\'' + prefix + '\', false)"><i class="fas fa-compress-alt"></i> Collapse All</button>' +
-        '</div>';
-
-      var groups = {};
-      activeDels.forEach(function(d) {
-        var dt = d.final_date || 'No Date';
-        if (!groups[dt]) groups[dt] = [];
-        groups[dt].push(d);
-      });
-
-      var sortedDates = Object.keys(groups).sort();
-      var activeListHtml = '';
-      if (activeDels.length === 0) {
-        activeListHtml = '<div class="empty-state" style="padding:20px"><p>No active tasks in this view.</p></div>';
-      } else {
-        activeListHtml = sortedDates.map(function(dt) {
-          var g = groups[dt];
-          var dateId = dt.replace(/[^a-zA-Z0-9]/g, '');
-          var renderedCards = g.map(renderCard).join('');
-          return '<div style="margin-top:14px">' +
-            '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;padding:6px 12px;background:var(--sur);border-radius:6px;border-left:4px solid var(--P);box-shadow:var(--sh-sm)">' +
-            '<div style="font-weight:800;font-size:12.5px;color:var(--tx)">' +
-            '<i class="fas fa-calendar-day" style="color:var(--P);margin-right:6px"></i> ' + _fmtDate(dt) + ' ' +
-            '<span style="font-size:11px;font-weight:500;color:var(--tx3)">(' + g.length + ' task' + (g.length !== 1 ? 's' : '') + ')</span>' +
+        '</div>' +
+        '<div class="dcards">' +
+        dels.map(function (d) {
+          var effStatus = d.is_overdue && d.status !== 'Completed' ? 'Overdue' : d.status;
+          var cls = d.status === 'Completed' ? 'done' : d.is_overdue ? 'overdue' : d.status === 'Shifted' ? 'shifted' : d.status === 'Cancelled' ? 'cancelled' : '';
+          var dl = _dl(d.final_date);
+          var dlTxt = dl === null ? '' :
+            dl < 0 ? '<span style="color:var(--R);font-weight:800"><i class="fas fa-triangle-exclamation"></i> Overdue by ' + Math.abs(dl) + 'd</span>' :
+              dl === 0 ? '<span style="color:var(--O);font-weight:800"><i class="fas fa-clock"></i> Due Today</span>' :
+                '<span style="color:var(--tx3)"><i class="fas fa-calendar"></i> Due in ' + dl + 'd</span>';
+          return '<div class="dcard ' + cls + '">' +
+            '<div class="dc-top">' +
+            '<div class="dc-desc">' + _esc(d.task_desc) + '</div>' +
+            _statusBadge(effStatus) +
             '</div>' +
-            '<button class="btn btn-xs btn-outline" style="padding:2px 6px" onclick="_toggleDateGroup(\'' + prefix + '\',\'' + dateId + '\')">' +
-            '<i class="fas fa-chevron-down date-group-ico-' + prefix + '" id="dg_ico_' + prefix + '_' + dateId + '"></i>' +
-            '</button>' +
+            '<div class="dc-meta">' +
+            (isOut ?
+              '<span><i class="fas fa-user-check"></i> To: <strong>' + _esc(d.delegated_to_name) + '</strong></span>' :
+              '<span><i class="fas fa-user"></i> By: <strong>' + _esc(d.delegated_by_name) + '</strong></span>') +
+            '<span><i class="fas fa-calendar-plus"></i> ' + _fmtDate(d.first_date) + '</span>' +
+            '<span><i class="fas fa-flag-checkered"></i> ' + _fmtDate(d.final_date) + '</span>' +
+            (d.status !== 'Completed' ? '<span>' + dlTxt + '</span>' : '') +
+            (d.revision_1 ? '<span style="color:var(--V)"><i class="fas fa-calendar-days"></i> Rev1: ' + _fmtDate(d.revision_1) + '</span>' : '') +
+            (d.revision_2 ? '<span style="color:var(--V)"><i class="fas fa-calendar-days"></i> Rev2: ' + _fmtDate(d.revision_2) + '</span>' : '') +
             '</div>' +
-            '<div class="dcards date-group-content-' + prefix + '" id="dg_' + prefix + '_' + dateId + '">' +
-            renderedCards +
+            '<div class="dc-act">' +
+            (!isOut && d.status !== 'Completed' && d.status !== 'Cancelled' ?
+              '<button class="btn btn-green btn-sm" data-tid="' + _esc(d.task_id) + '" onclick="_dComplete(this)"><i class="fas fa-check"></i> Mark Complete</button>' +
+              '<button class="btn btn-outline btn-sm" data-tid="' + _esc(d.task_id) + '" onclick="_dShift(this)"><i class="fas fa-calendar-days"></i> Request Shift</button>' : '') +
+            (isOut && d.status !== 'Completed' && d.status !== 'Cancelled' ?
+              '<button class="btn btn-outline btn-sm" data-tid="' + _esc(d.task_id) + '" onclick="_dCancel(this)"><i class="fas fa-times"></i> Cancel</button>' : '') +
             '</div>' +
             '</div>';
-        }).join('');
-      }
-
-      var completedDrawerHtml = '';
-      if (completedDels.length > 0) {
-        var completedCards = completedDels.map(renderCard).join('');
-        completedDrawerHtml = 
-          '<div style="margin-top:24px;border-top:1.5px solid var(--bdr);padding-top:16px">' +
-          '<button class="btn btn-outline btn-wide" onclick="_toggleCompletedTasks(\'' + prefix + '\')" style="display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:700">' +
-          '<span><i class="fas fa-check-circle" style="color:var(--G)"></i> Show Completed Tasks (' + completedDels.length + ')</span>' +
-          '<i class="fas fa-chevron-right" id="comp_ico_' + prefix + '"></i>' +
-          '</button>' +
-          '<div id="completed_dels_container_' + prefix + '" style="display:none;margin-top:12px" class="dcards">' +
-          completedCards +
-          '</div>' +
-          '</div>';
-      }
-
-      el.innerHTML = headerHtml + controlBarHtml + activeListHtml + completedDrawerHtml;
+        }).join('') +
+        '</div>';
     }
 
     function _dComplete(btn) {
       var tid = btn.getAttribute('data-tid');
       _openModal('<i class="fas fa-check-circle" style="color:var(--G)"></i> Mark as Completed',
-        '<p style="font-size:14px;color:var(--tx2);line-height:1.6">Confirm that you have completed this task?</p>' +
-        '<div class="fgrp" style="margin-top:14px">' +
-        '<label style="font-size:12px;font-weight:700;color:var(--tx2);display:block;margin-bottom:6px"><i class="fas fa-paperclip"></i> Attach Proof of Work (Optional)</label>' +
-        '<input type="file" id="dCompPhoto" accept="image/*" style="font-size:12px;width:100%">' +
-        '</div>',
+        '<p style="font-size:14px;color:var(--tx2);line-height:1.6">Confirm that you have completed this task?</p>',
         function () {
-          var fileEl = document.getElementById('dCompPhoto');
-          var file = fileEl && fileEl.files ? fileEl.files[0] : null;
-          var submitComplete = function(photoBase64) {
-            _closeModal();
-            _gas('updateDelegationStatus', [tid, 'Completed', photoBase64 || ''], function () {
-              _toast('Marked as Completed!', 'ok');
-              _addNtf('Delegation marked complete', 'fa-check-circle', 'var(--Gl)', 'var(--G)');
-              _loadDMine();
-            }, function (e) { _toast('Error: ' + e.message, 'err'); });
-          };
-
-          if (file) {
-            _toast('Processing image proof...', 'warn');
-            var reader = new FileReader();
-            reader.onload = function(e) {
-              var img = new Image();
-              img.onload = function() {
-                var canvas = document.createElement('canvas');
-                var maxW = 400; // Keep image compact for sheet cells compatibility
-                var w = img.width, h = img.height;
-                if (w > maxW) {
-                  h = Math.round(h * maxW / w);
-                  w = maxW;
-                }
-                canvas.width = w; canvas.height = h;
-                var ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, w, h);
-                submitComplete(canvas.toDataURL('image/jpeg', 0.6));
-              };
-              img.onerror = function() { submitComplete(''); };
-              img.src = e.target.result;
-            };
-            reader.onerror = function() { submitComplete(''); };
-            reader.readAsDataURL(file);
-          } else {
-            submitComplete('');
-          }
+          _closeModal();
+          _gas('updateDelegationStatus', [tid, 'Completed'], function () {
+            _toast('Marked as Completed!', 'ok');
+            _addNtf('Delegation marked complete', 'fa-check-circle', 'var(--Gl)', 'var(--G)');
+            _loadDMine();
+          }, function (e) { _toast('Error: ' + e.message, 'err'); });
         }, '<i class="fas fa-check"></i> Complete');
     }
     function _dCancel(btn) {
@@ -6854,473 +6432,364 @@
         _endSub('btnSaveDel');
         _toast('Delegation created: ' + r.task_id, 'ok');
         _addNtf('Task delegated to ' + toNm, 'fa-paper-plane', 'var(--Vl)', 'var(--V)', 'deleg');
-        
-        // Show explicit success modal
-        _openModal('<i class="fas fa-check-circle" style="color:var(--G)"></i> Task Delegated',
-          '<p style="font-size:14px;color:var(--tx2);line-height:1.6">The task <strong>' + _esc(r.task_id) + '</strong> has been assigned to <strong>' + _esc(toNm) + '</strong> successfully!</p>',
-          null, 'OK'
-        );
-
-        // Fully reset the form
-        if (sel) sel.value = '';
         var descEl = document.getElementById('dcrDesc'); if (descEl) descEl.value = '';
         var dateEl = document.getElementById('dcrDate'); if (dateEl) dateEl.value = _daysLater(3);
         var ccEl = document.getElementById('dcrCC'); if (ccEl) ccEl.textContent = '0 chars';
       }, function (e) { _endSub('btnSaveDel'); _toast('Error: ' + e.message, 'err'); });
     }
-
-    function _inspectPhoto(url) {
-      _openModal('<i class="fas fa-image" style="color:var(--P)"></i> Proof of Work Attachment',
-        '<div style="text-align:center;padding:10px">' +
-        '<img src="' + _esc(url) + '" style="max-width:100%;max-height:70vh;border-radius:8px;box-shadow:var(--sh-lg);border:1px solid var(--bdr)">' +
-        '</div>',
-        null, 'Close'
-      );
-    }
-
-    function _toggleDateGroup(prefix, id) {
-      var el = document.getElementById('dg_' + prefix + '_' + id);
-      var ico = document.getElementById('dg_ico_' + prefix + '_' + id);
-      if (el) {
-        var isCollapsed = el.style.display === 'none';
-        el.style.display = isCollapsed ? 'grid' : 'none';
-        if (ico) {
-          ico.className = isCollapsed ? 'fas fa-chevron-down date-group-ico-' + prefix : 'fas fa-chevron-right date-group-ico-' + prefix;
-        }
-      }
-    }
-
-    function _toggleAllDateGroups(prefix, expand) {
-      document.querySelectorAll('.date-group-content-' + prefix).forEach(function(el) {
-        el.style.display = expand ? 'grid' : 'none';
-      });
-      document.querySelectorAll('.date-group-ico-' + prefix).forEach(function(ico) {
-        ico.className = expand ? 'fas fa-chevron-down' : 'fas fa-chevron-right';
-      });
-    }
-
-    function _toggleCompletedTasks(prefix) {
-      var el = document.getElementById('completed_dels_container_' + prefix);
-      var ico = document.getElementById('comp_ico_' + prefix);
-      if (el) {
-        var isHidden = el.style.display === 'none';
-        el.style.display = isHidden ? 'grid' : 'none';
-        if (ico) {
-          ico.className = isHidden ? 'fas fa-chevron-down' : 'fas fa-chevron-right';
-        }
-      }
-    }
-
     function _goDCr() { _loadV('deleg', 'dcr'); }
     function _goAttend() { _loadV('attend'); }
     function _goCheck() { _loadV('check'); }
 
     /* ══════════════════════════════════════════════════════════
-       ATTENDANCE MODULE v2
+       ATTENDANCE MODULE
     ══════════════════════════════════════════════════════════ */
     function _vAttend() {
       var tabs = [
-        { id: 'amy',  lbl: '<i class="fas fa-calendar-alt"></i> My Attendance' },
-        { id: 'alv',  lbl: '<i class="fas fa-umbrella-beach"></i> Leave Summary' },
-        { id: 'alr',  lbl: '<i class="fas fa-plane-departure"></i> Request Leave' },
-        { id: 'areg', lbl: '<i class="fas fa-edit"></i> Regularize' }
+        { id: 'amy', lbl: '<i class="fas fa-user-clock"></i> My Attendance' },
+        { id: 'alv', lbl: '<i class="fas fa-umbrella-beach"></i> Leave Summary' },
+        { id: 'alr', lbl: '<i class="fas fa-plane-departure"></i> Request Leave' }
       ];
       if (_isManager()) {
-        tabs.push({ id: 'ala',   lbl: '<i class="fas fa-user-shield"></i> Approvals' });
-        tabs.push({ id: 'areva', lbl: '<i class="fas fa-clipboard-check"></i> Reg. Approvals' });
-        tabs.push({ id: 'amust', lbl: '<i class="fas fa-id-card-clip"></i> Muster' });
-        tabs.push({ id: 'aana',  lbl: '<i class="fas fa-chart-bar"></i> Analytics' });
+        tabs.push({ id: 'ala', lbl: '<i class="fas fa-user-shield"></i> Approvals' });
+        tabs.push({ id: 'amust', lbl: '<i class="fas fa-users"></i> Muster Report' });
+        tabs.push({ id: 'aimp', lbl: '<i class="fas fa-upload"></i> Import Data' });
       }
       var at = _ST || 'amy';
+
       document.getElementById('content').innerHTML =
         '<div class="mod-head">' +
-        '<div><div class="mod-title">Attendance &amp; Leave</div><div class="mod-sub">Punch records, leave requests &amp; muster reports</div></div>' +
-        '<button class="btn btn-teal btn-sm" onclick="_loadV(\'attend\',\'alr\')"><i class="fas fa-plus"></i> Request Leave</button>' +
+        '<div><div class="mod-title">Attendance & Leave</div><div class="mod-sub">Punch records, leave requests & muster reports</div></div>' +
+        '<button class="btn btn-teal btn-sm" onclick="_goALR()"><i class="fas fa-plus"></i> Request Leave</button>' +
         '</div>' +
         _mkTabs(tabs, at) +
         _mkPanes(tabs, at, [
-          _amyForm(),
-          _alvForm(),
-          _alrForm(),
-          _aregForm(),
-          (_isManager() ? _alaForm()   : ''),
-          (_isManager() ? _arevaForm() : ''),
-          (_isManager() ? _amustForm() : ''),
-          (_isManager() ? _aanaForm()  : '')
+          '<div id="amyPane">' + _amyForm() + '</div>',
+          '<div id="alvPane">' + _alvForm() + '</div>',
+          '<div id="alrPane">' + _alrForm() + '</div>',
+          (_isManager() ? '<div id="alaPane">' + _alaForm() + '</div>' : ''),
+          (_isManager() ? '<div id="amustPane">' + _amustForm() + '</div>' : ''),
+          (_isManager() ? '<div id="aimpPane">' + _aimpForm() + '</div>' : '')
         ]);
-      if      (at==='amy')  setTimeout(_attMyAtt, 50);
-      else if (at==='alv')  _attLeave();
-      else if (at==='alr')  _attMyLvReqs();
-      else if (at==='areg') _attMyRegReqs();
-      else if (at==='ala'   && _isManager()) setTimeout(_attLvApprov, 50);
-      else if (at==='areva' && _isManager()) setTimeout(_attRegApprov, 50);
-      else if (at==='amust' && _isManager()) _attMuster();
-      else if (at==='aana'  && _isManager()) _attAna();
-      if (_ST) setTimeout(function(){ _switchTab(_ST); }, 50);
+
+      if (at === 'amy') _loadMyAtt();
+      else if (at === 'alv') _loadLeave();
+      else if (at === 'alr') _loadMyLeaveReqs();
+      else if (at === 'ala' && _isManager()) _loadLeaveApprovals();
+      else if (at === 'amust' && _isManager()) _loadMuster();
+      if (_ST) setTimeout(function () { _switchTab(_ST); }, 30);
     }
 
-    /* ── My Attendance ── */
     function _amyForm() {
       return '<div class="fbar">' +
-        '<label>Month:</label><input type="month" id="amyMonth" value="'+_currMonth()+'">' +
-        '<button class="btn btn-sm" onclick="_attMyAtt()"><i class="fas fa-search"></i> Load</button>' +
+        '<label>Month:</label><input type="month" id="amyMonth" value="' + _currMonth() + '">' +
+        '<button class="btn btn-sm" onclick="_loadMyAtt()"><i class="fas fa-search"></i> Load</button>' +
         '<div class="fbar-spacer"></div>' +
-        '<div style="display:flex;gap:6px">' +
-        '<button class="btn btn-outline btn-sm" id="btnAmyCal" onclick="_amySetView(\'cal\')" style="font-weight:900"><i class="fas fa-calendar"></i> Calendar</button>' +
-        '<button class="btn btn-outline btn-sm" id="btnAmyTbl" onclick="_amySetView(\'tbl\')"><i class="fas fa-table"></i> Table</button>' +
-        '<button class="btn btn-outline btn-sm" onclick="_attExportAtt()"><i class="fas fa-download"></i> CSV</button>' +
-        '</div></div>' +
-        '<div id="amyStreak"></div>' +
-        '<div id="amySum"></div>' +
-        '<div id="amyCal" style="display:none"></div>' +
-        '<div id="amyTable"></div>';
+        '<button class="btn btn-outline btn-sm" onclick="_exportAtt()"><i class="fas fa-download"></i> Export CSV</button>' +
+        '</div><div id="amySum"></div><div id="amyTable"></div>';
     }
-    var _amyView = 'cal';
-    function _amySetView(v) {
-      _amyView = v;
-      var cal=document.getElementById('amyCal'); var tbl=document.getElementById('amyTable');
-      if(cal) cal.style.display = v==='cal'?'':'none';
-      if(tbl) tbl.style.display = v==='tbl'?'':'none';
-      var bc=document.getElementById('btnAmyCal'); var bt=document.getElementById('btnAmyTbl');
-      if(bc) bc.style.fontWeight=v==='cal'?'900':'600';
-      if(bt) bt.style.fontWeight=v==='tbl'?'900':'600';
-    }
-    function _attMyAtt() {
+    function _loadMyAtt() {
       var month = document.getElementById('amyMonth') ? document.getElementById('amyMonth').value : _currMonth();
-      var sumEl=document.getElementById('amySum'); var calEl=document.getElementById('amyCal');
-      var tblEl=document.getElementById('amyTable'); var strEl=document.getElementById('amyStreak');
-      if (!sumEl) return;
-      sumEl.innerHTML=_skel(1,'sk-h6'); if(calEl)calEl.innerHTML=''; if(tblEl)tblEl.innerHTML='';
-      _amyView = 'cal';
-      _gas('getMyAttendance', [_U.emp_code, month], function(data) {
-        _D.myAtt=data; var s=data.summary||{};
-        if(strEl&&s.streak>2) strEl.innerHTML='<div style="background:linear-gradient(90deg,var(--Gl),var(--Tl));border-radius:12px;padding:10px 18px;margin-bottom:12px;display:flex;align-items:center;gap:10px"><span style="font-size:22px">🔥</span><span style="font-weight:800;color:var(--G)">'+s.streak+'-day streak!</span></div>';
-        else if(strEl) strEl.innerHTML='';
-        sumEl.innerHTML='<div class="att-sum">'+[['Full Days','full_days','var(--G)'],['Half Days','half_days','var(--O)'],['Absent','absent','var(--R)'],['Holidays','holiday','#4338ca'],['Week Off','week_off','var(--tx2)'],['Late','late','var(--V)']].map(function(k){return'<div class="att-kpi"><div class="val" style="color:'+k[2]+'">'+(s[k[1]]||0)+'</div><div class="lbl">'+k[0]+'</div></div>';}).join('')+'</div>';
-        if(calEl) calEl.innerHTML=_attBuildCal(data.records||[], month);
-        var recs=data.records||[];
-        if(tblEl) {
-          if(!recs.length) tblEl.innerHTML='<div class="te"><i class="fas fa-calendar-times"></i> No records for '+month+'</div>';
-          else tblEl.innerHTML='<div class="table-card"><div class="tw"><table><thead><tr><th>Date</th><th>Day</th><th>Check In</th><th>Check Out</th><th>Hours</th><th>Status</th><th>Late</th></tr></thead><tbody>'+recs.map(function(r){return'<tr><td style="font-weight:700">'+_fmtDate(r.date)+'</td><td style="color:var(--tx2)">'+_esc(r.day_name||'')+'</td><td style="color:var(--G);font-weight:700">'+_esc(r.check_in||'—')+'</td><td style="color:var(--R);font-weight:700">'+_esc(r.check_out||'—')+'</td><td style="color:var(--P);font-weight:800">'+_esc(r.total_hours||'—')+'</td><td>'+_statusBadge(r.status)+'</td><td>'+(r.is_late?'<span style="color:var(--V);font-size:11px;font-weight:700"><i class="fas fa-clock"></i> Late</span>':'')+'</td></tr>';}).join('')+'</tbody></table></div></div>';
-        }
-        _amySetView(_amyView);
-      }, function(e){ if(sumEl) sumEl.innerHTML='<div class="te">Error: '+_esc(e.message)+'</div>'; });
-    }
-    function _attBuildCal(recs, month) {
-      var yr=parseInt(month.split('-')[0]), mo=parseInt(month.split('-')[1]);
-      var dim=new Date(yr,mo,0).getDate(), fd=new Date(yr,mo-1,1).getDay();
-      var map={}; recs.forEach(function(r){ map[r.date]=r; });
-      var mns=['January','February','March','April','May','June','July','August','September','October','November','December'];
-      var dns=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-      var html='<div style="background:var(--sur);border-radius:14px;padding:16px;margin-bottom:12px"><div style="text-align:center;font-weight:900;font-size:15px;margin-bottom:14px">'+mns[mo-1]+' '+yr+'</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center">';
-      dns.forEach(function(d){ html+='<div style="font-size:10px;font-weight:800;color:var(--tx2);padding:4px">'+d+'</div>'; });
-      for(var i=0;i<fd;i++) html+='<div></div>';
-      for(var d=1;d<=dim;d++){
-        var ds=month+'-'+String(d).padStart(2,'0'), r=map[ds];
-        var bg='var(--sur2)',c='var(--tx3)',ic='',late='';
-        if(r){var st=r.status;if(st==='P'||st==='FD'){bg='var(--Gl)';c='var(--G)';ic='✓';}else if(st==='HD'){bg='#fff3cd';c='var(--O)';ic='½';}else if(st==='A'){bg='var(--Rl)';c='var(--R)';ic='✗';}else if(st==='H'){bg='#ede9fe';c='#4338ca';ic='H';}else if(st==='WO'||st==='WE'){c='var(--tx2)';ic='WO';}if(r.is_late)late='<div style="position:absolute;top:1px;right:2px;font-size:7px;color:var(--V)">●</div>';}
-        html+='<div style="position:relative;background:'+bg+';border-radius:10px;padding:8px 4px;min-height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:default" title="'+ds+(r?' | '+(r.check_in||'-')+'→'+(r.check_out||'-'):'')+'"><div style="font-size:12px;font-weight:700;color:var(--tx2);margin-bottom:3px">'+d+'</div><div style="font-size:13px;font-weight:900;color:'+c+'">'+ic+'</div>'+late+'</div>';
-      }
-      html+='</div><div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:14px;font-size:11px;font-weight:700;align-items:center"><span style="color:var(--G)"><span style="background:var(--Gl);border-radius:4px;padding:2px 6px">✓ Present</span></span> <span style="color:var(--O)"><span style="background:#fff3cd;border-radius:4px;padding:2px 6px">½ Half Day</span></span> <span style="color:var(--R)"><span style="background:var(--Rl);border-radius:4px;padding:2px 6px">✗ Absent</span></span> <span style="color:#4338ca"><span style="background:#ede9fe;border-radius:4px;padding:2px 6px">H Holiday</span></span> <span style="color:var(--tx2)">WO Week Off</span> <span style="color:var(--V)">● Late</span></div></div>';
-      return html;
-    }
-    function _attExportAtt() {
-      var data=_D.myAtt; if(!data||!data.records||!data.records.length){_toast('No data','err');return;}
-      var rows=[['Date','Day','Check In','Check Out','Hours','Status','Late']];
-      data.records.forEach(function(r){rows.push([r.date,r.day_name,r.check_in,r.check_out,r.total_hours,r.status,r.is_late?'Yes':'']);});
-      _downloadCSV('attendance_'+(document.getElementById('amyMonth')?document.getElementById('amyMonth').value:_currMonth())+'.csv',rows);
-    }
+      var sumEl = document.getElementById('amySum');
+      var tblEl = document.getElementById('amyTable');
+      if (!sumEl || !tblEl) return;
+      sumEl.innerHTML = _skel(1, 'sk-h6'); tblEl.innerHTML = '';
 
-    /* ── Leave Summary ── */
+      _gas('getMyAttendance', [_U.emp_code, month], function (data) {
+        _D.myAtt = data;
+        var s = data.summary || {};
+        sumEl.innerHTML =
+          '<div class="att-sum">' +
+          [
+            ['Full Days', 'full_days', 'var(--G)'],
+            ['Half Days', 'half_days', 'var(--O)'],
+            ['Absent', 'absent', 'var(--R)'],
+            ['Holidays', 'holiday', '#4338ca'],
+            ['Week Off', 'week_off', 'var(--tx2)']
+          ].map(function (k) {
+            return '<div class="att-kpi"><div class="val" style="color:' + k[2] + '">' + (s[k[1]] || 0) + '</div><div class="lbl">' + k[0] + '</div></div>';
+          }).join('') +
+          '</div>';
+
+        var recs = data.records || [];
+        if (!recs.length) { tblEl.innerHTML = '<div class="te"><i class="fas fa-calendar-times"></i>No attendance records for ' + month + '</div>'; return; }
+        tblEl.innerHTML =
+          '<div class="table-card"><div class="tw"><table><thead><tr>' +
+          '<th>Date</th><th>Day</th><th>Shift</th><th>Punch In</th><th>Punch Out</th><th>Hours</th><th>Status</th>' +
+          '</tr></thead><tbody>' +
+          recs.map(function (r) {
+            return '<tr>' +
+              '<td style="font-weight:700">' + _fmtDate(r.date) + '</td>' +
+              '<td style="color:var(--tx2);font-weight:600">' + (r.day_name || '') + '</td>' +
+              '<td><span class="tag">' + _esc(r.shift || '—') + '</span></td>' +
+              '<td style="font-weight:700;color:var(--G)">' + _esc(r.punch_in || '—') + '</td>' +
+              '<td style="font-weight:700;color:var(--R)">' + _esc(r.punch_out || '—') + '</td>' +
+              '<td style="color:var(--P);font-weight:800">' + _esc(r.total_hours || '—') + '</td>' +
+              '<td>' + _statusBadge(r.status) + '</td>' +
+              '</tr>';
+          }).join('') +
+          '</tbody></table></div></div>';
+      }, function (e) { sumEl.innerHTML = '<div class="te">Error: ' + _esc(e.message) + '</div>'; });
+    }
+    function _exportAtt() {
+      var data = _D.myAtt;
+      if (!data || !data.records || !data.records.length) { _toast('No attendance data to export', 'err'); return; }
+      var rows = [['Date', 'Day', 'Shift', 'Punch In', 'Punch Out', 'Total Hours', 'Status']];
+      data.records.forEach(function (r) { rows.push([r.date, r.day_name, r.shift, r.punch_in, r.punch_out, r.total_hours, r.status]); });
+      _downloadCSV('attendance_' + (document.getElementById('amyMonth') ? document.getElementById('amyMonth').value : _currMonth()) + '.csv', rows);
+    }
     function _alvForm() {
-      return '<div class="fbar"><label>Month:</label><input type="month" id="alvMonth" value="'+_currMonth()+'"><button class="btn btn-sm" onclick="_attLeave()"><i class="fas fa-search"></i> Load</button></div><div id="alvBalance"></div><div id="alvRes"></div>';
+      return '<div class="fbar"><label>Month:</label><input type="month" id="alvMonth" value="' + _currMonth() + '"><button class="btn btn-sm" onclick="_loadLeave()"><i class="fas fa-search"></i> Load</button></div><div id="alvRes"></div>';
     }
-    function _attLeave() {
-      var month=document.getElementById('alvMonth')?document.getElementById('alvMonth').value:_currMonth();
-      var el=document.getElementById('alvRes'), balEl=document.getElementById('alvBalance');
-      if(!el) return;
-      el.innerHTML=_skel(1,'sk-h6');
-      if(balEl){
-        balEl.innerHTML=_skel(1,'sk-h4');
-        _gas('getLeaveBalance',[],function(bal){
-          balEl.innerHTML='<div style="margin-bottom:16px"><div class="sec-title" style="margin-bottom:10px"><i class="fas fa-wallet" style="color:var(--P)"></i> Leave Balance '+new Date().getFullYear()+'</div><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px">'+['Sick Leave','Paid Leave','Casual Leave','WFH','Comp Off'].map(function(t){var b=bal[t]||{quota:0,used:0,remaining:0};var pct=b.quota>0?Math.round(b.remaining/b.quota*100):100;var c=pct>50?'var(--G)':pct>20?'var(--O)':'var(--R)';return'<div class="card card-nohover" style="padding:12px;text-align:center"><div style="font-size:22px;font-weight:900;color:'+c+'">'+b.remaining+'</div><div style="font-size:10px;font-weight:700;color:var(--tx2);text-transform:uppercase;margin:2px 0">'+t+'</div><div style="font-size:10px;color:var(--tx3)">'+b.used+' used / '+b.quota+' total</div></div>';}).join('')+'</div></div>';
-        },function(){balEl.innerHTML='';});
-      }
-      _gas('getLeaveSummary',[_U.emp_code,month],function(rows){
-        if(!rows||!rows.length){el.innerHTML='<div class="te"><i class="fas fa-calendar-times"></i> No leave records</div>';return;}
-        var r=rows[0];
-        el.innerHTML='<div class="sec-title" style="margin-bottom:10px"><i class="fas fa-list" style="color:var(--T)"></i> Month Summary</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">'+[['fa-bed','Sick Leave',r.sick_leave||0,'var(--R)'],['fa-suitcase','Paid Leave',r.paid_leave||0,'var(--G)'],['fa-mug-hot','Casual Leave',r.casual_leave||0,'var(--O)'],['fa-laptop-house','WFH',r.wfh||0,'var(--P)'],['fa-circle-half-stroke','Comp Off',r.comp_off||0,'var(--V)'],['fa-triangle-exclamation','LWP',r.lwp||0,'var(--R)']].map(function(k){return'<div class="card card-nohover" style="text-align:center"><div class="kpi-ico" style="margin:0 auto 10px;color:'+k[3]+'"><i class="fas '+k[0]+'"></i></div><div style="font-size:26px;font-weight:900;color:'+k[3]+';margin-bottom:4px">'+k[2]+'</div><div style="font-size:11px;color:var(--tx2);font-weight:700;text-transform:uppercase">'+k[1]+'</div></div>';}).join('')+'</div><div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap"><span class="tag" style="background:var(--Ol);color:var(--O)">⏳ Pending: '+(r.total_pending||0)+'</span><span class="tag" style="background:var(--Rl);color:var(--R)">✗ Rejected: '+(r.total_rejected||0)+'</span><span class="tag" style="background:var(--sur2);color:var(--tx2)">↩ Cancelled: '+(r.total_cancelled||0)+'</span></div>';
-      },function(e){el.innerHTML='<div class="te">Error: '+_esc(e.message)+'</div>';});
+    function _loadLeave() {
+      var month = document.getElementById('alvMonth') ? document.getElementById('alvMonth').value : _currMonth();
+      var el = document.getElementById('alvRes');
+      if (!el) return;
+      el.innerHTML = _skel(1, 'sk-h6');
+      _gas('getLeaveSummary', [_U.emp_code, month], function (rows) {
+        if (!rows || !rows.length) { el.innerHTML = '<div class="te"><i class="fas fa-calendar-times"></i>No leave records for this month</div>'; return; }
+        var r = rows[0];
+        el.innerHTML = '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">' +
+          [
+            ['fa-bed', 'Sick Leave', r.sick_leave || 0, 'var(--R)'],
+            ['fa-suitcase', 'Paid Leave', r.paid_leave || 0, 'var(--G)'],
+            ['fa-mug-hot', 'Casual Leave', r.casual_leave || 0, 'var(--O)'],
+            ['fa-circle-half-stroke', 'Comp Off', r.comp_off || 0, 'var(--V)'],
+            ['fa-laptop-house', 'WFH', r.wfh || 0, 'var(--P)'],
+            ['fa-triangle-exclamation', 'LWP', r.lwp || 0, 'var(--R)']
+          ].map(function (k) {
+            return '<div class="card card-nohover" style="text-align:center">' +
+              '<div class="kpi-ico" style="margin:0 auto 12px;background:rgba(0,0,0,.04);color:' + k[3] + '"><i class="fas ' + k[0] + '"></i></div>' +
+              '<div style="font-size:28px;font-weight:900;color:' + k[3] + ';margin-bottom:5px;letter-spacing:-1px">' + k[2] + '</div>' +
+              '<div style="font-size:11px;color:var(--tx2);font-weight:700;text-transform:uppercase;letter-spacing:.4px">' + k[1] + '</div>' +
+              '</div>';
+          }).join('') +
+          '</div>';
+      }, function (e) { el.innerHTML = '<div class="te">Error: ' + _esc(e.message) + '</div>'; });
     }
-
-    /* ── Request Leave ── */
     function _alrForm() {
       return '<div style="display:grid;grid-template-columns:340px 1fr;gap:20px">' +
-        '<div><div class="sec-title" style="margin-bottom:14px"><i class="fas fa-plane-departure" style="color:var(--T)"></i> New Leave Request</div>' +
+        '<div class="card card-nohover card-sm">' +
+        '<div class="sec-title" style="margin-bottom:14px"><i class="fas fa-plane-departure" style="color:var(--T)"></i> New Leave Request</div>' +
         '<div class="fgrp"><label>Leave Type <span class="req">★</span></label>' +
-        '<select id="lvrType" onchange="_lvrTypeChange()"><option>Sick Leave</option><option>Paid Leave</option><option>Casual Leave</option><option>Comp Off</option><option>WFH</option><option>LWP</option><option>Half Day</option></select></div>' +
-        '<div id="lvrHDRow" style="display:none"><div class="fgrp"><label>Date <span class="req">★</span></label><input type="date" id="lvrHDDate"></div><div class="fgrp"><label>Session</label><select id="lvrHDSess"><option>Morning</option><option>Afternoon</option></select></div></div>' +
-        '<div id="lvrDRRow"><div class="fgrp"><label>From <span class="req">★</span></label><input type="date" id="lvrFrom"></div><div class="fgrp"><label>To <span class="req">★</span></label><input type="date" id="lvrTo"></div></div>' +
-        '<div class="fgrp"><label>Reason</label><textarea id="lvrReason" rows="3" placeholder="Brief reason..."></textarea></div>' +
-        '<button class="btn btn-teal btn-wide" id="btnSaveLvr" onclick="_attSaveLv()"><i class="fas fa-paper-plane"></i> Submit Request</button></div>' +
-        '<div><div class="sec-title" style="margin-bottom:12px"><i class="fas fa-history" style="color:var(--tx2)"></i> My Requests</div>' +
-        '<div id="lvrHist"><div class="te"><i class="fas fa-inbox"></i> Loading...</div></div>' +
-        '<div style="margin-top:18px"><div class="sec-title" style="margin-bottom:8px"><i class="fas fa-users" style="color:var(--P)"></i> Team on Leave</div><div id="lvrTeam"><div class="te" style="font-size:12px">Loading...</div></div></div>' +
-        '</div></div>';
-    }
-    function _lvrTypeChange() {
-      var t=document.getElementById('lvrType')?document.getElementById('lvrType').value:'';
-      var hd=document.getElementById('lvrHDRow'), dr=document.getElementById('lvrDRRow');
-      if(hd) hd.style.display=t==='Half Day'?'':'none';
-      if(dr) dr.style.display=t==='Half Day'?'none':'';
-    }
-    function _attSaveLv() {
-      if(!_startSub('btnSaveLvr')) return;
-      var type=document.getElementById('lvrType')?document.getElementById('lvrType').value:'Sick Leave';
-      var reason=document.getElementById('lvrReason')?document.getElementById('lvrReason').value.trim():'';
-      var from,to;
-      if(type==='Half Day'){
-        from=document.getElementById('lvrHDDate')?document.getElementById('lvrHDDate').value:''; to=from;
-        if(!_req(from,'Date')){_endSub('btnSaveLvr');return;}
-        var sess=document.getElementById('lvrHDSess')?document.getElementById('lvrHDSess').value:'Morning';
-        reason=sess+' half day'+(reason?': '+reason:'');
-      } else {
-        from=document.getElementById('lvrFrom')?document.getElementById('lvrFrom').value:'';
-        to=document.getElementById('lvrTo')?document.getElementById('lvrTo').value:'';
-        if(!_req(from,'From Date')||!_req(to,'To Date')){_endSub('btnSaveLvr');return;}
-        if(to<from){_toast('To Date cannot be before From Date','err');_endSub('btnSaveLvr');return;}
-      }
-      _gas('requestLeave',[{leave_type:type,from_date:from,to_date:to,reason:reason}],function(){
-        _endSub('btnSaveLvr'); _toast('Leave request submitted!','ok');
-        _addNtf('Leave submitted: '+type,'fa-umbrella-beach','var(--Tl)','var(--T)');
-        // reset form
-        if(document.getElementById('lvrFrom')) document.getElementById('lvrFrom').value='';
-        if(document.getElementById('lvrTo')) document.getElementById('lvrTo').value='';
-        if(document.getElementById('lvrReason')) document.getElementById('lvrReason').value='';
-        _attMyLvReqs();
-      },function(e){_endSub('btnSaveLvr');_toast('Error: '+e.message,'err');});
-    }
-    function _attMyLvReqs() {
-      var el=document.getElementById('lvrHist'), teamEl=document.getElementById('lvrTeam');
-      if(!el) return;
-      el.innerHTML=_skel(2,'sk-h4');
-      _gas('getLeaveRequests',[{}],function(reqs){
-        console.log('[_attMyLvReqs] reqs:', reqs ? reqs.length : 'null', JSON.stringify(reqs||[]).substring(0,200));
-        if(!reqs||!reqs.length){el.innerHTML='<div class="te"><i class="fas fa-inbox"></i> No requests found</div>';return;}
-        el.innerHTML='<div class="table-card"><div class="tw"><table><thead><tr><th>Dates</th><th>Type</th><th>Days</th><th>Reason</th><th>Remark</th><th>Status</th><th>Action</th></tr></thead><tbody>'+reqs.map(function(r){return'<tr><td style="font-weight:700">'+_fmtDate(r.from_date)+(r.from_date!==r.to_date?' → '+_fmtDate(r.to_date):'')+'</td><td>'+_esc(r.leave_type)+'</td><td style="font-weight:800">'+(r.num_days||'—')+'</td><td style="font-size:11px;color:var(--tx2);max-width:130px">'+_esc(r.reason||'—')+'</td><td style="font-size:11px;color:var(--tx2);max-width:130px">'+_esc(r.remarkbymanagement||'—')+'</td><td>'+_statusBadge(r.status,true)+'</td><td>'+(r.status==='Pending'?'<button class="btn btn-red btn-xs" onclick="_attCancelLv(\''+_esc(r.request_id)+'\')"><i class="fas fa-times"></i></button>':'—')+'</td></tr>';}).join('')+'</tbody></table></div></div>';
-      },function(e){el.innerHTML='<div class="te"><i class="fas fa-exclamation-triangle"></i> Error: '+_esc(e.message||'Unknown error')+'</div>';console.error('[MyLvReqs]',e);});
-      if(teamEl){
-        teamEl.innerHTML=_skel(1,'sk-h4');
-        _gas('getLeaveRequests',[{ft:'team'}],function(reqs){
-          var today=_today(); var up=reqs.filter(function(r){return r.to_date>=today;}).slice(0,6);
-          if(!up.length){teamEl.innerHTML='<div class="te" style="font-size:12px">No upcoming team leaves</div>';return;}
-          teamEl.innerHTML='<div style="display:flex;flex-direction:column;gap:6px">'+up.map(function(r){return'<div style="display:flex;align-items:center;gap:8px;padding:7px 12px;background:var(--sur);border-radius:8px;font-size:12px"><i class="fas fa-user-circle" style="color:var(--P)"></i><span style="font-weight:700">'+_esc(r.emp_name)+'</span><span style="color:var(--tx2)">'+_fmtDate(r.from_date)+(r.from_date!==r.to_date?' – '+_fmtDate(r.to_date):'')+'</span><span style="color:'+(r.status==='Approved'?'var(--G)':'var(--O)')+';font-weight:700;margin-left:auto">'+r.status+'</span></div>';}).join('')+'</div>';
-        },function(){teamEl.innerHTML='';});
-      }
-    }
-    function _attCancelLv(rid) {
-      if(!confirm('Cancel this leave request?')) return;
-      _gas('cancelLeaveRequest',[rid],function(){_toast('Cancelled','ok');_attMyLvReqs();},function(e){_toast('Error: '+e.message,'err');});
-    }
-
-    /* ── Approvals (Manager) ── */
-    function _alaForm() {
-      return '<div class="fbar"><label>Filter:</label><select id="alaFilter" onchange="_attLvApprov()"><option value="Pending">Pending Only</option><option value="All">All</option></select></div><div id="alaList">'+_skel(3)+'</div>';
-    }
-    function _attLvApprov() {
-      var el=document.getElementById('alaList'); if(!el) return;
-      el.innerHTML=_skel(3);
-      _gas('getLeaveRequests',[{ft:'approvals'}],function(reqs){
-        console.log('[_attLvApprov] reqs:', reqs ? reqs.length : 'null');
-        var f=document.getElementById('alaFilter')?document.getElementById('alaFilter').value:'Pending';
-        var reqsSafe = reqs || [];
-        if(f==='Pending') reqsSafe=reqsSafe.filter(function(r){return String(r.status||r['status']||'').trim()==='Pending';});
-        if(!reqsSafe.length){el.innerHTML='<div class="empty-state"><i class="fas fa-check-circle" style="color:var(--G)"></i><h4>All Clear!</h4><p>No pending requests</p></div>';return;}
-        reqs = reqsSafe;
-        el.innerHTML='<div class="table-card"><div class="tw"><table><thead><tr><th>Employee</th><th>Dept</th><th>Dates</th><th>Type</th><th>Days</th><th>Reason</th><th>Remark</th><th>Status</th><th>Actions</th></tr></thead><tbody>'+reqs.map(function(r){return'<tr><td style="font-weight:800">'+_esc(r.emp_name)+'</td><td style="font-size:11px;color:var(--tx2)">'+_esc(r.dept||'')+'</td><td>'+_fmtDate(r.from_date)+(r.from_date!==r.to_date?' → '+_fmtDate(r.to_date):'')+'</td><td>'+_esc(r.leave_type)+'</td><td style="font-weight:800">'+(r.num_days||'—')+'</td><td style="font-size:11px;color:var(--tx2);max-width:140px">'+_esc(r.reason||'—')+'</td><td style="font-size:11px;color:var(--tx2);max-width:140px">'+_esc(r.remarkbymanagement||'—')+'</td><td>'+_statusBadge(r.status,true)+'</td><td><div style="display:flex;gap:4px">'+(r.status==='Pending'?'<button class="btn btn-green btn-xs" data-rid="'+_esc(r.request_id)+'" onclick="_attActLv(this,\'Approved\')"><i class="fas fa-check"></i> OK</button><button class="btn btn-red btn-xs" data-rid="'+_esc(r.request_id)+'" onclick="_attActLv(this,\'Rejected\')"><i class="fas fa-times"></i></button>':'<span style="color:var(--tx3);font-size:11px">Done</span>')+'</div></td></tr>';}).join('')+'</tbody></table></div></div>';
-      },function(e){el.innerHTML='<div class="te">Error: '+_esc(e.message)+'</div>';});
-    }
-    function _attActLv(btn,status) {
-      var rid=btn.getAttribute('data-rid');
-      var remark = prompt("Enter Remark by Management (optional):", "");
-      if (remark === null) return; // User cancelled
-      btn.disabled=true;
-      _gas('approveLeaveRequest',[rid,status,remark],function(){
-        _toast('Leave '+status+'!','ok');
-        _addNtf('Leave '+status.toLowerCase(),'fa-check-circle','var(--Gl)','var(--G)');
-        _attLvApprov();
-      },function(e){_toast('Error: '+e.message,'err');btn.disabled=false;});
-    }
-
-    /* ── Regularize ── */
-    function _aregForm() {
-      return '<div style="display:grid;grid-template-columns:340px 1fr;gap:20px">' +
-        '<div><div class="sec-title" style="margin-bottom:12px"><i class="fas fa-edit" style="color:var(--V)"></i> New Regularization Request</div>' +
-        '<div style="font-size:12px;color:var(--tx2);margin-bottom:12px">Missed punch or wrong time? Submit a correction request.</div>' +
-        '<div class="fgrp"><label>Date <span class="req">★</span></label><input type="date" id="regDate"></div>' +
-        '<div class="fgrp"><label>Expected Check-In <span class="req">★</span></label><input type="time" id="regIn"></div>' +
-        '<div class="fgrp"><label>Expected Check-Out</label><input type="time" id="regOut"></div>' +
-        '<div class="fgrp"><label>Reason <span class="req">★</span></label><textarea id="regReason" rows="3" placeholder="Why regularization is needed..."></textarea></div>' +
-        '<button class="btn btn-wide" style="background:var(--V);color:#fff" id="btnSaveReg" onclick="_attSaveReg()"><i class="fas fa-paper-plane"></i> Submit</button></div>' +
-        '<div><div class="sec-title" style="margin-bottom:12px"><i class="fas fa-history" style="color:var(--tx2)"></i> My History</div><div id="regHist">'+_skel(2,'sk-h4')+'</div></div>' +
+        '<select id="lvrType">' +
+        '<option>Sick Leave</option><option>Paid Leave</option><option>Casual Leave</option>' +
+        '<option>Comp Off</option><option>WFH</option><option>LWP</option>' +
+        '</select></div>' +
+        '<div class="frow">' +
+        '<div class="fgrp"><label>From <span class="req">★</span></label><input type="date" id="lvrFrom" value="' + _today() + '"></div>' +
+        '<div class="fgrp"><label>To <span class="req">★</span></label><input type="date" id="lvrTo" value="' + _today() + '"></div>' +
+        '</div>' +
+        '<div class="fgrp"><label>Reason (optional)</label><textarea id="lvrReason" placeholder="Brief reason for leave..." rows="3"></textarea></div>' +
+        '<button class="btn btn-teal btn-wide" id="btnSaveLvr" onclick="_saveLeaveReq()"><i class="fas fa-paper-plane"></i> Submit Request</button>' +
+        '</div>' +
+        '<div>' +
+        '<div class="sec-title" style="margin-bottom:12px"><i class="fas fa-history" style="color:var(--tx2)"></i> My Request History</div>' +
+        '<div id="lvrHist">' + _skel(3, 'sk-h4') + '</div>' +
+        '</div>' +
         '</div>';
     }
-    function _attSaveReg() {
-      if(!_startSub('btnSaveReg')) return;
-      var date=document.getElementById('regDate')?document.getElementById('regDate').value:'';
-      var expIn=document.getElementById('regIn')?document.getElementById('regIn').value:'';
-      var expOut=document.getElementById('regOut')?document.getElementById('regOut').value:'';
-      var reason=document.getElementById('regReason')?document.getElementById('regReason').value.trim():'';
-      if(!_req(date,'Date')||!_req(expIn,'Check-In Time')||!_req(reason,'Reason')){_endSub('btnSaveReg');return;}
-      _gas('requestRegularization',[{reg_date:date,expected_in:expIn,expected_out:expOut,reason:reason}],function(){
-        try {
-          _endSub('btnSaveReg'); 
-          _toast('Regularization submitted!','ok');
-          _addNtf('Regularization submitted','fa-edit','var(--Vl)','var(--V)');
-          if(document.getElementById('regDate')) document.getElementById('regDate').value='';
-          if(document.getElementById('regIn')) document.getElementById('regIn').value='';
-          if(document.getElementById('regOut')) document.getElementById('regOut').value='';
-          if(document.getElementById('regReason')) document.getElementById('regReason').value='';
-          _attMyRegReqs();
-        } catch(err) {
-          console.error('[attSaveReg SuccessCallback Error]', err);
-          _toast('Error during post-submission: ' + err.message, 'err');
+    function _saveLeaveReq() {
+      if (!_startSub('btnSaveLvr')) return;
+      var type = document.getElementById('lvrType') ? document.getElementById('lvrType').value : 'Sick Leave';
+      var from = document.getElementById('lvrFrom') ? document.getElementById('lvrFrom').value : '';
+      var to = document.getElementById('lvrTo') ? document.getElementById('lvrTo').value : '';
+      var reason = document.getElementById('lvrReason') ? document.getElementById('lvrReason').value.trim() : '';
+      if (!_req(from, 'From Date') || !_req(to, 'To Date')) { _endSub('btnSaveLvr'); return; }
+      if (to < from) { _toast('To Date cannot be before From Date', 'err'); _endSub('btnSaveLvr'); return; }
+      _gas('requestLeave', [{ leave_type: type, from_date: from, to_date: to, reason: reason }], function () {
+        _endSub('btnSaveLvr');
+        _toast('Leave request submitted!', 'ok');
+        _addNtf('Leave request submitted: ' + type, 'fa-umbrella-beach', 'var(--Tl)', 'var(--T)', 'attend');
+        _loadMyLeaveReqs();
+      }, function (e) { _endSub('btnSaveLvr'); _toast('Error: ' + e.message, 'err'); });
+    }
+    function _loadMyLeaveReqs() {
+      var el = document.getElementById('lvrHist');
+      if (!el) return;
+      el.innerHTML = _skel(2, 'sk-h4');
+      _gas('getLeaveRequests', [{}], function (reqs) {
+        if (!reqs || !reqs.length) { el.innerHTML = '<div class="te"><i class="fas fa-inbox"></i>No leave requests found</div>'; return; }
+        el.innerHTML = '<div class="table-card"><div class="tw"><table><thead><tr><th>Dates</th><th>Type</th><th>Days</th><th>Status</th></tr></thead><tbody>' +
+          reqs.map(function (r) {
+            return '<tr>' +
+              '<td style="font-weight:700">' + _fmtDate(r.from_date) + ' → ' + _fmtDate(r.to_date) + '</td>' +
+              '<td>' + _esc(r.leave_type) + '</td>' +
+              '<td style="font-weight:800">' + (r.num_days || '—') + '</td>' +
+              '<td>' + _statusBadge(r.status, true) + '</td>' +
+              '</tr>';
+          }).join('') +
+          '</tbody></table></div></div>';
+      }, function (e) { el.innerHTML = '<div class="te">Error: ' + _esc(e.message) + '</div>'; });
+    }
+    function _alaForm() {
+      return '<div class="fbar"><label>Filter:</label><select id="alaFilter" onchange="_loadLeaveApprovals()"><option value="Pending">Pending Only</option><option value="All">All Requests</option></select></div><div id="alaList">' + _skel(3) + '</div>';
+    }
+    function _loadLeaveApprovals() {
+      var el = document.getElementById('alaList');
+      if (!el) return;
+      el.innerHTML = _skel(3);
+      _gas('getLeaveRequests', [{ for: 'approvals' }], function (reqs) {
+        var filter = document.getElementById('alaFilter') ? document.getElementById('alaFilter').value : 'Pending';
+        if (filter === 'Pending') reqs = reqs.filter(function (r) { return r.status === 'Pending'; });
+        if (!reqs || !reqs.length) {
+          el.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle" style="color:var(--G)"></i><h4>All Clear!</h4><p>No pending leave requests to review</p></div>';
+          return;
         }
-      },function(e){
-        _endSub('btnSaveReg');
-        _toast('Error: ' + (e ? e.message || e : 'Unknown error'), 'err');
-      });
+        el.innerHTML = '<div class="table-card"><div class="tw"><table><thead><tr>' +
+          '<th>Employee</th><th>Dates</th><th>Type</th><th>Days</th><th>Reason</th><th>Status</th><th>Actions</th>' +
+          '</tr></thead><tbody>' +
+          reqs.map(function (r) {
+            return '<tr>' +
+              '<td style="font-weight:800">' + _esc(r.emp_name) + '</td>' +
+              '<td>' + _fmtDate(r.from_date) + ' → ' + _fmtDate(r.to_date) + '</td>' +
+              '<td>' + _esc(r.leave_type) + '</td>' +
+              '<td style="font-weight:800">' + (r.num_days || '—') + '</td>' +
+              '<td style="font-size:12px;color:var(--tx2);max-width:180px">' + _esc(r.reason || '—') + '</td>' +
+              '<td>' + _statusBadge(r.status, true) + '</td>' +
+              '<td><div style="display:flex;gap:6px">' +
+              (r.status === 'Pending' ?
+                '<button class="btn btn-green btn-xs" data-rid="' + _esc(r.request_id) + '" onclick="_updateLeave(this,\'Approved\')"><i class="fas fa-check"></i> Approve</button>' +
+                '<button class="btn btn-red btn-xs" data-rid="' + _esc(r.request_id) + '" onclick="_updateLeave(this,\'Rejected\')"><i class="fas fa-times"></i> Reject</button>' :
+                '<span style="color:var(--tx3);font-size:12px">Processed</span>') +
+              '</div></td>' +
+              '</tr>';
+          }).join('') +
+          '</tbody></table></div></div>';
+      }, function (e) { el.innerHTML = '<div class="te">Error: ' + _esc(e.message) + '</div>'; });
     }
-    function _attMyRegReqs() {
-      var el=document.getElementById('regHist'); if(!el) return;
-      el.innerHTML=_skel(2,'sk-h4');
-      _gas('getRegularizationRequests',[{}],function(reqs){
-        try {
-          console.log('[_attMyRegReqs] reqs:', reqs ? reqs.length : 'null', JSON.stringify(reqs||[]).substring(0,200));
-          var reqsSafe = reqs || [];
-          if(!reqsSafe.length){
-            el.innerHTML='<div class="te"><i class="fas fa-inbox"></i> No requests</div>';
-            return;
-          }
-          el.innerHTML='<div class="table-card"><div class="tw"><table><thead><tr><th>Date</th><th>Expected In</th><th>Expected Out</th><th>Reason</th><th>Remark</th><th>Status</th></tr></thead><tbody>'+reqsSafe.map(function(r){return'<tr><td style="font-weight:700">'+_fmtDate(String(r.reg_date||''))+'</td><td style="color:var(--G);font-weight:700">'+_esc(r.expected_in||'—')+'</td><td style="color:var(--R);font-weight:700">'+_esc(r.expected_out||'—')+'</td><td style="font-size:11px;color:var(--tx2);max-width:130px">'+_esc(r.reason||'')+'</td><td style="font-size:11px;color:var(--tx2);max-width:130px">'+_esc(r.remarkbymanagement||'—')+'</td><td>'+_statusBadge(r.status,true)+'</td></tr>';}).join('')+'</tbody></table></div></div>';
-        } catch(err) {
-          console.error('[attMyRegReqs SuccessCallback Error]', err);
-          el.innerHTML='<div class="te"><i class="fas fa-exclamation-triangle"></i> Render error: '+_esc(err.message||'Unknown error')+'</div>';
-        }
-      },function(e){
-        el.innerHTML='<div class="te"><i class="fas fa-exclamation-triangle"></i> Error: '+_esc(e ? e.message || e : 'Unknown error')+'</div>';
-        console.error('[MyRegReqs]',e);
-      });
+    function _updateLeave(btn, status) {
+      var rid = btn.getAttribute('data-rid');
+      btn.disabled = true;
+      _gas('approveLeaveRequest', [rid, status], function () {
+        _toast('Leave ' + status + '!', 'ok');
+        _addNtf('Leave request ' + status.toLowerCase(), status === 'Approved' ? 'fa-check-circle' : 'fa-times-circle', status === 'Approved' ? 'var(--Gl)' : 'var(--Rl)', status === 'Approved' ? 'var(--G)' : 'var(--R)');
+        _loadLeaveApprovals();
+      }, function (e) { _toast('Error: ' + e.message, 'err'); btn.disabled = false; });
     }
-
-    /* ── Reg. Approvals (Manager) ── */
-    function _arevaForm() { return '<div id="arevaList">'+_skel(3)+'</div>'; }
-    function _attRegApprov() {
-      var el=document.getElementById('arevaList'); if(!el) return;
-      el.innerHTML=_skel(3);
-      _gas('getRegularizationRequests',[{ft:'approvals'}],function(reqs){
-        console.log('[_attRegApprov] reqs:', reqs ? reqs.length : 'null');
-        var reqsSafe = reqs || [];
-        var p=reqsSafe.filter(function(r){return String(r.status||r['status']||'').trim()==='Pending';});
-        if(!p.length){el.innerHTML='<div class="empty-state"><i class="fas fa-check-circle" style="color:var(--G)"></i><h4>All Clear!</h4><p>No pending regularization requests</p></div>';return;}
-        el.innerHTML='<div class="table-card"><div class="tw"><table><thead><tr><th>Employee</th><th>Date</th><th>In</th><th>Out</th><th>Reason</th><th>Actions</th></tr></thead><tbody>'+p.map(function(r){return'<tr><td style="font-weight:800">'+_esc(r.emp_name)+'</td><td style="font-weight:700">'+_fmtDate(String(r.reg_date||''))+'</td><td style="color:var(--G);font-weight:700">'+_esc(r.expected_in||'—')+'</td><td style="color:var(--R);font-weight:700">'+_esc(r.expected_out||'—')+'</td><td style="font-size:11px;color:var(--tx2);max-width:150px">'+_esc(r.reason||'')+'</td><td><div style="display:flex;gap:4px"><button class="btn btn-green btn-xs" data-rid="'+_esc(r.reg_id)+'" onclick="_attActReg(this,\'Approved\')"><i class="fas fa-check"></i> Approve</button><button class="btn btn-red btn-xs" data-rid="'+_esc(r.reg_id)+'" onclick="_attActReg(this,\'Rejected\')"><i class="fas fa-times"></i></button></div></td></tr>';}).join('')+'</tbody></table></div></div>';
-      },function(e){el.innerHTML='<div class="te"><i class="fas fa-exclamation-triangle"></i> Error: '+_esc(e.message||'Unknown error')+'</div>';console.error('[RegApprov]',e);});
-    }
-    function _attActReg(btn,status) {
-      var rid=btn.getAttribute('data-rid');
-      var remark = prompt("Enter Remark by Management (optional):", "");
-      if (remark === null) return; // User cancelled
-      btn.disabled=true;
-      _gas('approveRegularization',[rid,status,remark],function(){_toast('Regularization '+status+'!','ok');_attRegApprov();},function(e){_toast('Error: '+e.message,'err');btn.disabled=false;});
-    }
-
-    /* ── Muster Report ── */
     function _amustForm() {
       return '<div class="fbar">' +
-        '<label>Dept:</label><select id="mustDept"><option value="All">All Departments</option><option>Admin</option><option>Accounts</option><option>Finance</option><option>Marketing</option><option>Operations</option></select>' +
-        '<label>Month:</label><input type="month" id="mustMonth" value="'+_currMonth()+'">' +
-        '<button class="btn btn-sm" onclick="_attMuster()"><i class="fas fa-search"></i> Load</button>' +
+        '<label>Dept:</label>' +
+        '<select id="mustDept"><option value="All">All Departments</option><option>Admin</option><option>Accounts</option><option>Finance</option><option>Marketing</option><option>Operations</option></select>' +
+        '<label>Month:</label><input type="month" id="mustMonth" value="' + _currMonth() + '">' +
+        '<button class="btn btn-sm" onclick="_loadMuster()"><i class="fas fa-search"></i> Load</button>' +
         '<div class="fbar-spacer"></div>' +
-        '<div class="search-inp" style="width:180px"><i class="fas fa-search"></i><input type="text" id="mustSearch" placeholder="Search employee..." oninput="_mustFilter(this.value)" style="border:none;background:transparent;outline:none;font-size:12px;color:var(--tx);padding-left:4px;width:140px"></div>' +
-        '<button class="btn btn-outline btn-sm" onclick="_attExportMuster()"><i class="fas fa-download"></i> Export</button>' +
+        '<button class="btn btn-outline btn-sm" onclick="_exportMuster()"><i class="fas fa-download"></i> Export</button>' +
         '</div>' +
-        '<div style="font-size:11px;color:var(--tx3);margin-bottom:8px;font-weight:600"><i class="fas fa-palette" style="margin-right:5px"></i><span style="color:var(--G)">P Present</span> · <span style="color:var(--O)">HD Half Day</span> · <span style="color:var(--R)">A Absent</span> · <span style="color:#4338ca">H Holiday</span> · <span style="color:var(--tx2)">WO Week Off</span></div>' +
-        '<div id="mustTable">'+_skel(2)+'</div>';
+        '<div style="font-size:12px;color:var(--tx3);margin-bottom:10px;font-weight:600">' +
+        '<i class="fas fa-palette" style="margin-right:6px"></i>' +
+        'Color guide: <span style="color:var(--G)">P/FD = Present</span> · <span style="color:var(--O)">HD = Half Day</span> · <span style="color:var(--R)">A = Absent</span> · <span style="color:#4338ca">H = Holiday</span> · <span style="color:var(--tx2)">WO = Week Off</span>' +
+        '</div>' +
+        '<div id="mustTable">' + _skel(2) + '</div>';
     }
-    function _attMuster() {
-      var dept=document.getElementById('mustDept')?document.getElementById('mustDept').value:'All';
-      var month=document.getElementById('mustMonth')?document.getElementById('mustMonth').value:_currMonth();
-      var el=document.getElementById('mustTable'); if(!el) return;
-      el.innerHTML=_skel(3);
-      _gas('getMusterReport',[dept,month],function(data){
-        _D.muster=data; var rows=data.employees||[], days=data.days||[];
-        if(!rows.length){el.innerHTML='<div class="te"><i class="fas fa-table"></i> No muster data</div>';return;}
-        var html='<div style="font-size:12px;color:var(--tx2);margin-bottom:8px;font-weight:700">'+rows.length+' employees · '+days.length+' days</div>';
-        html+='<div style="overflow-x:auto"><table style="min-width:'+(200+days.length*30)+'px;border-collapse:collapse"><thead><tr>'+
-          '<th style="position:sticky;left:0;background:var(--sur2);z-index:2;min-width:140px;text-align:left;padding:6px 10px">Employee</th>'+
-          '<th style="position:sticky;left:140px;background:var(--sur2);z-index:2;min-width:50px;text-align:center;padding:6px 4px">%</th>'+
-          days.map(function(d){var dd=parseInt(d.split('-')[2]);var dt=new Date(d);var wd=['S','M','T','W','T','F','S'][dt.getDay()];var we=dt.getDay()===0||dt.getDay()===6;return'<th style="text-align:center;padding:4px 2px;min-width:26px;font-size:9px;color:'+(we?'var(--tx3)':'var(--tx2)')+'">'+dd+'<br><span style="font-size:8px">'+wd+'</span></th>';}).join('')+
-          '</tr></thead><tbody>';
-        rows.forEach(function(emp){
-          var pct=emp.present_pct||0, pc=pct>=80?'var(--G)':pct>=60?'var(--O)':'var(--R)';
-          html+='<tr class="mstr-row" data-name="'+_esc(emp.emp_name.toLowerCase())+'">'+
-            '<td style="position:sticky;left:0;background:var(--bg);z-index:1;font-weight:700;font-size:12px;padding:5px 10px;white-space:nowrap">'+_esc(emp.emp_name)+'<div style="font-size:10px;color:var(--tx2)">'+_esc(emp.dept)+'</div></td>'+
-            '<td style="position:sticky;left:140px;background:var(--bg);z-index:1;text-align:center;font-weight:900;font-size:12px;color:'+pc+'">'+pct+'%</td>'+
-            days.map(function(d){var rec=emp.days&&emp.days[d];if(!rec)return'<td style="text-align:center;padding:2px"><div style="font-size:9px;color:var(--tx3)">—</div></td>';var st=rec.status,bg='var(--sur2)',c='var(--tx3)';if(st==='P'||st==='FD'){bg='var(--Gl)';c='var(--G)';}else if(st==='HD'){bg='#fff3cd';c='var(--O)';}else if(st==='A'){bg='var(--Rl)';c='var(--R)';}else if(st==='H'){bg='#ede9fe';c='#4338ca';}else if(st==='WO'||st==='WE'){bg='var(--sur2)';c='var(--tx3)';}return'<td style="text-align:center;padding:2px" title="'+d+' '+(rec.check_in||'')+'–'+(rec.check_out||'')+'"><div style="background:'+bg+';color:'+c+';font-size:9px;font-weight:900;border-radius:4px;padding:3px 1px">'+st+'</div></td>';}).join('')+
-            '</tr>';
-        });
-        html+='</tbody></table></div>';
-        el.innerHTML=html;
-      },function(e){el.innerHTML='<div class="te">Error: '+_esc(e.message)+'</div>';});
+    function _loadMuster() {
+      var dept = document.getElementById('mustDept') ? document.getElementById('mustDept').value : 'All';
+      var month = document.getElementById('mustMonth') ? document.getElementById('mustMonth').value : _currMonth();
+      var el = document.getElementById('mustTable');
+      if (!el) return;
+      el.innerHTML = _skel(3);
+      _gas('getMusterReport', [dept, month], function (rows) {
+        _D.muster = rows;
+        if (!rows || !rows.length) { el.innerHTML = '<div class="te"><i class="fas fa-table"></i>No muster data found</div>'; return; }
+        var allKeys = Object.keys(rows[0]);
+        var dateCols = allKeys.filter(function (k) { return k !== 'emp_id' && k !== 'emp_name' && k !== 'department'; });
+        el.innerHTML =
+          '<div class="export-bar"><i class="fas fa-users"></i><span>' + rows.length + ' employees · ' + dateCols.length + ' days</span></div>' +
+          '<div style="overflow-x:auto"><table style="min-width:' + (120 + dateCols.length * 36) + 'px"><thead><tr>' +
+          '<th style="position:sticky;left:0;background:var(--sur2);z-index:1">Employee</th>' +
+          '<th style="position:sticky;left:120px;background:var(--sur2);z-index:1">Dept</th>' +
+          dateCols.map(function (d) {
+            var short = d.split('-').slice(-1)[0]; // Get day number
+            return '<th style="text-align:center;padding:6px 4px;min-width:30px;font-size:10px">' + short + '</th>';
+          }).join('') +
+          '</tr></thead><tbody>' +
+          rows.map(function (r) {
+            return '<tr>' +
+              '<td style="font-weight:700;white-space:nowrap;position:sticky;left:0;background:var(--sur)">' + _esc(r.emp_name) + '</td>' +
+              '<td style="font-size:11px;color:var(--tx2);white-space:nowrap;position:sticky;left:120px;background:var(--sur)">' + _esc(r.department) + '</td>' +
+              dateCols.map(function (d) {
+                var v = String(r[d] || '');
+                var clr = v === 'P' || v === 'FD' ? 'var(--G)' : v === 'A' ? 'var(--R)' : v === 'HD' ? 'var(--O)' : v === 'H' ? '#4338ca' : v === 'WO' || v === 'WE' ? 'var(--tx3)' : 'var(--tx)';
+                return '<td style="text-align:center;font-weight:800;font-size:11px;color:' + clr + ';padding:6px 2px">' + (v || '—') + '</td>';
+              }).join('') +
+              '</tr>';
+          }).join('') +
+          '</tbody></table></div>';
+      }, function (e) { el.innerHTML = '<div class="te">Error: ' + _esc(e.message) + '</div>'; });
     }
-    function _mustFilter(q) {
-      q=(q||'').toLowerCase();
-      document.querySelectorAll('.mstr-row').forEach(function(tr){tr.style.display=!q||tr.getAttribute('data-name').indexOf(q)>-1?'':'none';});
+    function _exportMuster() {
+      var rows = _D.muster;
+      if (!rows || !rows.length) { _toast('No muster data to export', 'err'); return; }
+      var cols = Object.keys(rows[0]);
+      var csv = [cols].concat(rows.map(function (r) { return cols.map(function (c) { return r[c] || ''; }); }));
+      _downloadCSV('muster_' + _currMonth() + '.csv', csv);
     }
-    function _attExportMuster() {
-      var data=_D.muster; if(!data||!data.employees||!data.employees.length){_toast('Load muster first','err');return;}
-      var days=data.days||[];
-      var rows=[['Employee','Dept','%'].concat(days.map(function(d){return d.split('-')[2];}))];
-      data.employees.forEach(function(emp){var row=[emp.emp_name,emp.dept,emp.present_pct+'%'];days.forEach(function(d){var r=emp.days&&emp.days[d];row.push(r?r.status:'');});rows.push(row);});
-      _downloadCSV('muster_'+(document.getElementById('mustMonth')?document.getElementById('mustMonth').value:_currMonth())+'.csv',rows);
-      _toast('Exported!','ok');
+    function _aimpForm() {
+      return '<div style="display:grid;grid-template-columns:420px 1fr;gap:20px">' +
+        '<div class="card card-nohover card-sm">' +
+        '<div class="sec-title" style="margin-bottom:14px"><i class="fas fa-upload" style="color:var(--P)"></i> Import Attendance Record</div>' +
+        '<div class="fgrp"><label>Employee <span class="req">★</span></label><select id="aimpEmp"><option value="">Loading...</option></select></div>' +
+        '<div class="fgrp"><label>Date <span class="req">★</span></label><input type="date" id="aimpDate" value="' + _today() + '"></div>' +
+        '<div class="fgrp"><label>Attendance Status <span class="req">★</span></label>' +
+        '<select id="aimpStatus">' +
+        '<option value="FD">FD — Full Day Present</option>' +
+        '<option value="HD">HD — Half Day Present</option>' +
+        '<option value="A">A — Absent</option>' +
+        '<option value="H">H — Holiday</option>' +
+        '<option value="WO">WO — Week Off</option>' +
+        '<option value="WFH">WFH — Work From Home</option>' +
+        '</select>' +
+        '</div>' +
+        '<div class="frow">' +
+        '<div class="fgrp"><label>Punch In</label><input type="time" id="aimpIn"></div>' +
+        '<div class="fgrp"><label>Punch Out</label><input type="time" id="aimpOut"></div>' +
+        '</div>' +
+        '<div class="fgrp"><label>Shift</label><input type="text" id="aimpShift" placeholder="e.g. General, Night Shift..."></div>' +
+        '<button class="btn btn-wide" id="btnAimp" onclick="_importAtt()"><i class="fas fa-upload"></i> Import Record</button>' +
+        '</div>' +
+        '<div class="card card-nohover card-sm">' +
+        '<div class="sec-title" style="margin-bottom:12px"><i class="fas fa-info-circle" style="color:var(--I)"></i> Import Guide</div>' +
+        '<div style="font-size:13px;color:var(--tx2);line-height:1.8">' +
+        '<p style="margin-bottom:10px">Use this form to manually add or correct attendance records for any employee.</p>' +
+        '<div style="display:flex;flex-direction:column;gap:8px">' +
+        '<div style="display:flex;gap:10px"><div class="bdg bfd">FD</div><span>Full Day — employee was present all day</span></div>' +
+        '<div style="display:flex;gap:10px"><div class="bdg bhd">HD</div><span>Half Day — employee was present for half the day</span></div>' +
+        '<div style="display:flex;gap:10px"><div class="bdg babs">A</div><span>Absent — employee did not attend</span></div>' +
+        '<div style="display:flex;gap:10px"><div class="bdg bhol">H</div><span>Holiday — company holiday for that day</span></div>' +
+        '<div style="display:flex;gap:10px"><div class="bdg bwo">WO</div><span>Week Off — scheduled weekly off</span></div>' +
+        '</div>' +
+        '</div>' +
+        '</div>' +
+        '</div>';
     }
-
-    /* ── Attendance Analytics (Manager) ── */
-    function _aanaForm() {
-      return '<div class="fbar"><label>Month:</label><input type="month" id="aanaMonth" value="'+_currMonth()+'"><button class="btn btn-sm" onclick="_attAna()"><i class="fas fa-search"></i> Load</button>' +
-        '<div class="fbar-spacer"></div><div class="search-inp" style="width:180px"><i class="fas fa-search"></i><input type="text" id="anaSearch" placeholder="Search employee..." oninput="_anaFilter(this.value)" style="border:none;background:transparent;outline:none;font-size:12px;color:var(--tx);padding-left:4px;width:140px"></div>' +
-        '</div><div id="aanaContent">'+_skel(4)+'</div>';
+    function _importAtt() {
+      if (!_startSub('btnAimp')) return;
+      var emp = document.getElementById('aimpEmp') ? document.getElementById('aimpEmp').value : '';
+      var date = document.getElementById('aimpDate') ? document.getElementById('aimpDate').value : '';
+      var status = document.getElementById('aimpStatus') ? document.getElementById('aimpStatus').value : 'FD';
+      var pIn = document.getElementById('aimpIn') ? document.getElementById('aimpIn').value : '';
+      var pOut = document.getElementById('aimpOut') ? document.getElementById('aimpOut').value : '';
+      var shift = document.getElementById('aimpShift') ? document.getElementById('aimpShift').value.trim() : '';
+      if (!_req(emp, 'Employee') || !_req(date, 'Date')) { _endSub('btnAimp'); return; }
+      _gas('importAttendanceData', [{ emp_id: emp, date: date, status: status, punch_in: pIn, punch_out: pOut, shift: shift }], function () {
+        _endSub('btnAimp');
+        _toast('Attendance record imported!', 'ok');
+        _addNtf('Attendance imported for ' + date, 'fa-calendar-check', 'var(--Tl)', 'var(--T)');
+      }, function (e) { _endSub('btnAimp'); _toast('Error: ' + e.message, 'err'); });
     }
-    function _attAna() {
-      var month=document.getElementById('aanaMonth')?document.getElementById('aanaMonth').value:_currMonth();
-      var el=document.getElementById('aanaContent'); if(!el) return;
-      el.innerHTML=_skel(4);
-      _gas('getAttendanceAnalytics',[month],function(data){
-        var depts=data.dept_breakdown||[], abs=data.top_absentees||[], late=data.top_late||[];
-        var html='<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px">';
-        html+='<div class="card card-nohover"><div class="sec-title" style="margin-bottom:12px"><i class="fas fa-building" style="color:var(--P)"></i> Dept Attendance %</div>';
-        if(depts.length) html+=depts.map(function(d){var pct=d.pct||0,c=pct>=80?'var(--G)':pct>=60?'var(--O)':'var(--R)';return'<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:12px;font-weight:700;margin-bottom:4px"><span>'+_esc(d.dept)+'</span><span style="color:'+c+'">'+pct+'%</span></div><div style="height:8px;background:var(--sur2);border-radius:4px;overflow:hidden"><div style="height:100%;width:'+pct+'%;background:'+c+';border-radius:4px"></div></div></div>';}).join('');
-        else html+='<div class="te">No data</div>';
-        html+='</div>';
-        html+='<div class="card card-nohover"><div class="sec-title" style="margin-bottom:12px"><i class="fas fa-user-minus" style="color:var(--R)"></i> Most Absent</div>';
-        if(abs.length) html+='<div style="display:flex;flex-direction:column;gap:7px">'+abs.map(function(e,i){return'<div class="ana-row" data-name="'+_esc(e.emp_name.toLowerCase())+'" style="display:flex;align-items:center;gap:8px;font-size:12px"><span style="font-weight:900;color:var(--tx3);min-width:18px">#'+(i+1)+'</span><span style="font-weight:700;flex:1">'+_esc(e.emp_name)+'</span><span style="color:var(--tx2);font-size:11px">'+_esc(e.dept)+'</span><span style="font-weight:900;color:var(--R);min-width:40px;text-align:right">'+e.absent+' days</span></div>';}).join('')+'</div>';
-        else html+='<div class="te">No absences</div>';
-        html+='</div></div>';
-        html+='<div class="card card-nohover"><div class="sec-title" style="margin-bottom:12px"><i class="fas fa-clock" style="color:var(--V)"></i> Most Late Arrivals</div>';
-        var lateFilt=late.filter(function(e){return e.late>0;});
-        if(lateFilt.length) html+='<div style="display:flex;flex-direction:column;gap:7px">'+lateFilt.map(function(e,i){return'<div class="ana-row" data-name="'+_esc(e.emp_name.toLowerCase())+'" style="display:flex;align-items:center;gap:8px;font-size:12px"><span style="font-weight:900;color:var(--tx3);min-width:18px">#'+(i+1)+'</span><span style="font-weight:700;flex:1">'+_esc(e.emp_name)+'</span><span style="color:var(--tx2);font-size:11px">'+_esc(e.dept)+'</span><span style="font-weight:900;color:var(--V);min-width:40px;text-align:right">'+e.late+' times</span></div>';}).join('')+'</div>';
-        else html+='<div class="te">No late arrivals</div>';
-        html+='</div>';
-        el.innerHTML=html;
-      },function(e){el.innerHTML='<div class="te">Error: '+_esc(e.message)+'</div>';});
+    // Load employee selector for attendance import when tab is visited
+    function _initAimpEmps() {
+      var sel = document.getElementById('aimpEmp');
+      if (!sel || sel.options.length > 1) return;
+      _gas('getDoerList', [], function (doers) {
+        if (!sel) return;
+        sel.innerHTML = '<option value="">-- Select Employee --</option>' +
+          doers.map(function (d) {
+            return '<option value="' + _esc(d.emp_id) + '">' + _esc(d.name) + ' (' + _esc(d.department) + ')</option>';
+          }).join('');
+      }, function () { });
     }
-    function _anaFilter(q) {
-      q=(q||'').toLowerCase();
-      document.querySelectorAll('.ana-row').forEach(function(el){el.style.display=!q||el.getAttribute('data-name').indexOf(q)>-1?'':'none';});
-    }
-
-    function _goALR() { _loadV('attend', 'alr'); }
+    function _goALR() { _loadV('leave', 'lreq'); }
 
     /* ══════════════════════════════════════════════════════════
        HOLIDAY CALENDAR MODULE
@@ -9926,7 +9395,7 @@
       if (!el) return;
       el.innerHTML = _skel(4);
 
-      _gas('getLeaveRequests', [{ft:'own'}], function (reqs) {
+      _gas('getLeaveRequests', [{ for: 'own' }], function (reqs) {
         _D.myLeaves = reqs || [];
         var filtered = reqs.filter(function (r) {
           return !month || String(r.from_date || '').substring(0, 7) === month;
@@ -9956,7 +9425,6 @@
               '<span style="font-size:11px;font-weight:800;color:var(--P);margin-left:8px">(' + (r.num_days || 1) + ' day' + (r.num_days !== 1 ? 's' : '') + ')</span>' +
               '</div>' +
               (r.reason ? '<div style="font-size:12px;color:var(--tx3);margin-bottom:4px"><i class="fas fa-comment"></i> ' + _esc(r.reason) + '</div>' : '') +
-              (r.remarkbymanagement ? '<div style="font-size:12px;color:var(--V);margin-top:6px;margin-bottom:6px;padding:6px 12px;background:var(--sur);border-radius:6px;border-left:3px solid var(--V);display:inline-block"><i class="fas fa-comment-dots"></i> <strong>Remark:</strong> ' + _esc(r.remarkbymanagement) + '</div>' : '') +
               '<div style="font-size:11px;color:var(--tx3)">' +
               '<i class="fas fa-clock"></i> Applied: ' + _fmtDateTime(r.requested_at) +
               (r.approved_by ? ' &nbsp;·&nbsp; <i class="fas fa-user-check"></i> Approved by: ' + _esc(r.approved_by) : '') +
@@ -10056,7 +9524,7 @@
       if (!el) return;
       el.innerHTML = _skel(3);
 
-      _gas('getLeaveRequests', [{ft:'own'}], function (reqs) {
+      _gas('getLeaveRequests', [{ for: 'own' }], function (reqs) {
         var monthReqs = (reqs || []).filter(function (r) {
           return String(r.from_date || '').substring(0, 7) === month;
         });
@@ -10088,11 +9556,10 @@
       if (!el) return;
       el.innerHTML = _skel(4);
 
-      _gas('getLeaveRequests', [{ft:'approvals'}], function (reqs) {
-        var safeReqs = reqs || [];
-        _D.leaveApprovals = safeReqs;
+      _gas('getLeaveRequests', [{ for: 'approvals' }], function (reqs) {
+        _D.leaveApprovals = reqs || [];
         var st = document.getElementById('laprvStatus') ? document.getElementById('laprvStatus').value : 'Pending';
-        var flt = st === 'All' ? safeReqs : safeReqs.filter(function (r) { return r.status === st; });
+        var flt = st === 'All' ? reqs : reqs.filter(function (r) { return r.status === st; });
 
         if (!flt.length) {
           el.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><h4>No ' + (st !== 'All' ? st + ' ' : '') + 'Requests</h4><p>Nothing to review right now.</p></div>';
@@ -10123,7 +9590,7 @@
                 '<button class="btn btn-sm" style="background:var(--G)" onclick="_approveLeave(\'' + _esc(r.request_id) + '\',\'Approved\')"><i class="fas fa-check"></i> Approve</button>' +
                 '<button class="btn btn-sm btn-red" onclick="_approveLeave(\'' + _esc(r.request_id) + '\',\'Rejected\')"><i class="fas fa-times"></i> Reject</button>' +
                 '</div>' :
-                '<span style="font-size:11px;color:var(--tx3);font-weight:700">' + (r.approved_by ? 'by ' + _esc(r.approved_by) : '') + (r.remarkbymanagement ? '<br/><span style="font-size:11px;color:var(--V);font-weight:500">Remark: ' + _esc(r.remarkbymanagement) + '</span>' : '') + '</span>'
+                '<span style="font-size:11px;color:var(--tx3);font-weight:700">' + (r.approved_by ? 'by ' + _esc(r.approved_by) : '') + '</span>'
               ) +
               '</div>' +
               '</div>';
@@ -10133,9 +9600,7 @@
     }
 
     function _approveLeave(requestId, status) {
-      var remark = prompt("Enter Remark by Management (optional):", "");
-      if (remark === null) return;
-      _gas('approveLeaveRequest', [requestId, status, remark], function () {
+      _gas('approveLeaveRequest', [requestId, status], function () {
         _toast('Leave ' + status.toLowerCase() + '!', status === 'Approved' ? 'ok' : 'warn');
         _addNtf('Leave request ' + status.toLowerCase(), status === 'Approved' ? 'fa-check-circle' : 'fa-times-circle', status === 'Approved' ? 'var(--Gl)' : 'var(--Rl)', status === 'Approved' ? 'var(--G)' : 'var(--R)');
         _loadLeaveApprovals();
@@ -10569,8 +10034,11 @@
     //   setTimeout(_showNextTip, 3000);
     // }
 
-    /* _gas is defined earlier in the file — do not redefine here */
-
+    /* ══════════════════════════════════════════════════════════════════════
+       GAS BRIDGE — The single entry point for ALL backend calls.
+       Automatically appends the _U (logged-in user) object as the last
+       argument so every GAS function gets passedUser for auth verification.
+    ══════════════════════════════════════════════════════════════════════ */
     /* ══════════════════════════════════════════════════════════════════════
        SIGN-OUT OVERLAY HELPERS
     ══════════════════════════════════════════════════════════════════════ */
@@ -10762,11 +10230,9 @@
         // Checklist
         ctoday: _loadToday, cweek: _loadWeek, chist: _loadHist, csetup: _loadSetupTasks,
         // Delegation
-        dmine: _loadDMine, dout: _loadDOut, dall: _loadDAll, dcr: function(){},
-        // Attendance v2
-        amy: _attMyAtt, alv: _attLeave, alr: _attMyLvReqs, areg: _attMyRegReqs,
-        ala: _attLvApprov, areva: _attRegApprov, amust: _attMuster, aana: _attAna,
-        amyatt: _attMyAtt, amstr: _attMuster,
+        dmine: _loadDelMine, dout: _loadDelOut, dall: _loadDelAll, dcr: _loadDelCreate,
+        // Attendance
+        amyatt: _loadMyAtt, alr: _loadLeaveReq, alv: _loadLeaveSumm, amstr: _loadMusterTab,
         // Performance
         ptop: _loadTopPerformers, pind: _loadIndivPerf, pteam: _loadTeamPerf,
         // Leave management
@@ -10784,7 +10250,40 @@
       _loadMuster();
     }
 
-    /* _openModal and _closeModal are defined earlier in the file — do not redefine here */
+    /* ══════════════════════════════════════════════════════════════════════
+       MODAL SYSTEM — Generic modal with title, body, confirm, cancel
+    ══════════════════════════════════════════════════════════════════════ */
+    function _openModal(title, body, onConfirm, confirmLabel, noClose) {
+      var ov = document.getElementById('mOv');
+      var modal = document.getElementById('modal');
+      var tEl = document.getElementById('mTitle');
+      var bEl = document.getElementById('mBody');
+      var fEl = document.getElementById('mFoot');
+      if (!modal || !ov) return;
+
+      if (tEl) tEl.innerHTML = title || 'Confirm';
+      if (bEl) bEl.innerHTML = body || '';
+      if (fEl) fEl.innerHTML =
+        '<button class="btn btn-outline" onclick="_closeModal()"><i class="fas fa-times"></i> Cancel</button>' +
+        (onConfirm ? '<button class="btn" id="mConfirmBtn" onclick="(' + onConfirm.toString() + ')()">' + (confirmLabel || 'Confirm') + '</button>' : '');
+
+      ov.style.display = 'block';
+      modal.style.display = 'block';
+      modal.classList.add('open');
+
+      // Focus confirm button
+      setTimeout(function () {
+        var cb = document.getElementById('mConfirmBtn');
+        if (cb) cb.focus();
+      }, 100);
+    }
+
+    function _closeModal() {
+      var ov = document.getElementById('mOv');
+      var modal = document.getElementById('modal');
+      if (ov) ov.style.display = 'none';
+      if (modal) { modal.style.display = 'none'; modal.classList.remove('open'); }
+    }
 
     /* Close modal on ESC key */
     document.addEventListener('keydown', function (ev) {
@@ -10803,35 +10302,45 @@
     ══════════════════════════════════════════════════════════════════════ */
     function _login() {
       var emailEl = document.getElementById('femail');
-      var pwEl = document.getElementById('fpw');
-      var btnEl = document.getElementById('btnLogin');
+      var pwEl    = document.getElementById('fpw') || document.getElementById('fpass');
+      var btnEl   = document.getElementById('btnLogin');
+      var errEl   = document.getElementById('loginErr');
       if (!emailEl || !pwEl) return;
 
       var email = emailEl.value.trim().toLowerCase();
-      var pw = pwEl.value.trim();
-      var errEl = document.getElementById('loginErr');
+      var pw    = pwEl.value.trim();
 
-      if (!email) { if (errEl) errEl.textContent = 'Email is required.'; emailEl.focus(); return; }
-      if (!pw) { if (errEl) errEl.textContent = 'Password is required.'; pwEl.focus(); return; }
-      if (errEl) errEl.textContent = '';
+      if (!email) { if (errEl) { errEl.textContent = 'Email is required.'; errEl.classList.add('on'); } emailEl.focus(); return; }
+      if (!pw)    { if (errEl) { errEl.textContent = 'Password is required.'; errEl.classList.add('on'); } pwEl.focus(); return; }
+      if (errEl)  { errEl.textContent = ''; errEl.classList.remove('on'); }
 
       if (btnEl) { btnEl.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Signing in…'; btnEl.disabled = true; }
 
-      _gas('processLogin', [email, pw], function(res) {
+      var cbName = '_loginCb2';
+      window[cbName] = function(res) {
+        try { delete window[cbName]; } catch(x){}
+        var s = document.getElementById('_s_' + cbName);
+        if (s && s.parentNode) s.parentNode.removeChild(s);
         if (btnEl) { btnEl.innerHTML = '<i class="fas fa-arrow-right-to-bracket"></i> Sign In'; btnEl.disabled = false; }
-        if (res && res.success) {
-          // Store token: email:role
+        if (res && res.success && res.user) {
+          _U = res.user;
           _TOKEN = res.user.email + ':' + (res.user.role || 'STAFF').toLowerCase();
-          localStorage.setItem('fk_token', _TOKEN);
           _bootApp(res.user);
         } else {
           if (errEl) { errEl.textContent = (res && res.error) || 'Login failed.'; errEl.classList.add('on'); }
           if (pwEl) pwEl.focus();
         }
-      }, function(e) {
+      };
+
+      var payload = encodeURIComponent(JSON.stringify({ action: 'processLogin', args: [email, pw], token: '' }));
+      var s = document.createElement('script');
+      s.id  = '_s_' + cbName;
+      s.src = GAS_URL + '?callback=' + cbName + '&payload=' + payload;
+      s.onerror = function() {
         if (btnEl) { btnEl.innerHTML = '<i class="fas fa-arrow-right-to-bracket"></i> Sign In'; btnEl.disabled = false; }
-        if (errEl) { errEl.textContent = 'Server error: ' + (e.message || e); errEl.classList.add('on'); }
-      });
+        if (errEl) { errEl.textContent = 'Network error. Check connection.'; errEl.classList.add('on'); }
+      };
+      document.head.appendChild(s);
     }
 
     /* Allow Enter key to submit login form */
@@ -10870,9 +10379,72 @@
        STUB LOADERS — Fallbacks for modules not yet fully implemented
        These are called by _switchTab and prevent console errors.
     ══════════════════════════════════════════════════════════════════════ */
-    // Note: _loadToday and _markDone are defined in the Checklist module section above.
+    function _loadToday() {
+      var empId = document.getElementById('ckEmp') ? document.getElementById('ckEmp').value : (_U ? _U.emp_code : '');
+      var date = document.getElementById('ckDate') ? document.getElementById('ckDate').value : _today();
+      var el = document.getElementById('ckList');
+      var prog = document.getElementById('ckProgress');
+      if (!el) return;
+      el.innerHTML = _skel(4);
 
-    // Note: _loadWeek, _loadHist, _loadSetupTasks are defined in the Checklist module section above.
+      _gas('getTodayTasks', [empId, date], function (tasks) {
+        _D.todayTasks = tasks || [];
+        var done = tasks.filter(function (t) { return t.status === 'Done'; }).length;
+        var total = tasks.length;
+        var pct = total > 0 ? Math.round(done / total * 100) : 0;
+        if (prog) {
+          prog.innerHTML =
+            '<div style="display:flex;align-items:center;gap:14px;background:var(--bg);border:1px solid var(--bdr);border-radius:10px;padding:12px 16px">' +
+            '<div style="flex:1">' +
+            '<div style="display:flex;justify-content:space-between;margin-bottom:6px">' +
+            '<span style="font-size:12px;font-weight:700;color:var(--tx2)">Today\'s Progress</span>' +
+            '<span style="font-size:12px;font-weight:900;color:var(--P)">' + done + ' / ' + total + ' done</span>' +
+            '</div>' +
+            '<div class="pbar-wrap"><div class="pbar" style="width:' + pct + '%;background:' + (pct === 100 ? 'var(--G)' : pct >= 60 ? 'var(--P)' : 'var(--O)') + '"></div></div>' +
+            '</div>' +
+            '<div style="font-size:22px;font-weight:900;color:' + (pct === 100 ? 'var(--G)' : pct >= 60 ? 'var(--P)' : 'var(--O)') + '">' + pct + '%</div>' +
+            '</div>';
+        }
+        if (!tasks.length) {
+          el.innerHTML = '<div class="empty-state"><i class="fas fa-list-check"></i><h4>No Tasks Today</h4><p>No tasks are scheduled for ' + _fmtDate(date) + '.</p></div>';
+          return;
+        }
+        el.innerHTML = tasks.map(function (t) {
+          var isDone = t.status === 'Done';
+          var isPend = t.status === 'Pending';
+          return '<div class="task-card" style="display:flex;align-items:center;gap:12px;padding:13px 16px;background:var(--sur);border:1px solid var(--bdr);border-radius:10px;margin-bottom:10px;transition:all .15s"' +
+            (isDone ? ' style="opacity:.6"' : '') + '>' +
+            '<div style="width:20px;height:20px;border-radius:50%;border:2px solid ' + _colorForStatus(t.status) + ';background:' + (isDone ? _colorForStatus(t.status) : 'transparent') + ';flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer" ' +
+            (isPend ? 'onclick="_markDone(\'' + _esc(t.task_uid) + '\',\'' + _esc(date) + '\')"' : '') + '>' +
+            (isDone ? '<i class="fas fa-check" style="font-size:10px;color:#fff"></i>' : '') +
+            '</div>' +
+            '<div style="flex:1;min-width:0">' +
+            '<div style="font-size:13.5px;font-weight:700;' + (isDone ? 'text-decoration:line-through;color:var(--tx3)' : '') + '">' + _esc(t.task_name) + '</div>' +
+            '<div style="font-size:11px;color:var(--tx3);margin-top:3px;display:flex;gap:8px">' +
+            _freqBadge(t.frequency) +
+            (t.actual_dt ? '<span>Done: ' + _fmtDate(t.actual_dt) + '</span>' : '') +
+            '</div>' +
+            '</div>' +
+            _statusBadge(t.status) +
+            (isPend ?
+              '<button class="btn btn-sm btn-xs" onclick="_markDone(\'' + _esc(t.task_uid) + '\',\'' + _esc(date) + '\')"><i class="fas fa-check"></i> Done</button>' :
+              '') +
+            '</div>';
+        }).join('');
+      }, function (e) { el.innerHTML = '<div class="te">Error: ' + _esc(e.message) + '</div>'; });
+    }
+
+    function _markDone(taskUid, date) {
+      _gas('markTaskDone', [taskUid, date, ''], function () {
+        _toast('Task marked as done!', 'ok');
+        _addNtf('Task completed', 'fa-check-circle', 'var(--Gl)', 'var(--G)');
+        _loadToday();
+      }, function (e) { _toast('Error: ' + e.message, 'err'); });
+    }
+
+    function _loadWeek() { /* Handled by getWeeklyTasks — see cweek pane */ }
+    function _loadHist() { /* Handled by getTaskHistory — see chist pane */ }
+    function _loadSetupTasks() { /* Handled by getTaskSetup — see csetup pane (manager) */ }
     function _loadDelMine() { /* Handled by getMyDelegations — see dmine pane */ }
     function _loadDelOut() { /* Handled by getMyDelegatedOut — see dout pane */ }
     function _loadDelAll() { /* Handled by getAllDelegations — see dall pane (manager) */ }
@@ -11741,10 +11313,9 @@
       return '<span style="display:inline-flex;align-items:center;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:999px;background:' + bg + ';color:' + c + ';letter-spacing:.3px">' + _esc(status || '—') + '</span>';
     }
 
-    /* Frequency badge — all 14 supported frequencies */
+    /* Frequency badge: D → Daily, W → Weekly, M → Monthly */
     function _freqBadge(freq) {
-      var _fl = { D: 'Daily', F: 'Fortnightly', W: 'Weekly', M: 'Monthly', '2M': 'Bi-Monthly', Q: 'Quarterly', '4M': 'Every 4M', H: 'Half-Yearly', Y: 'Yearly', E1st: '1st Wkday/Mo', E2nd: '2nd Wkday/Mo', E3rd: '3rd Wkday/Mo', E4th: '4th Wkday/Mo', ELast: 'Last Wkday/Mo' };
-      var lbl = _fl[freq] || freq || '—';
+      var lbl = freq === 'D' ? 'Daily' : freq === 'W' ? 'Weekly' : freq === 'M' ? 'Monthly' : freq || '—';
       return '<span style="display:inline-flex;font-size:10px;font-weight:800;padding:1px 7px;border-radius:999px;background:var(--Pl);color:var(--P)">' + lbl + '</span>';
     }
 
@@ -11771,61 +11342,6 @@
       if (!_U) return false;
       var r = String(_U.role || '').toUpperCase();
       return r === 'OWNER' || r === 'MANAGER';
-    }
-
-    function _dateTimeLocal() {
-      var now = new Date();
-      var y = now.getFullYear();
-      var m = String(now.getMonth() + 1).padStart(2, '0');
-      var d = String(now.getDate()).padStart(2, '0');
-      var h = String(now.getHours()).padStart(2, '0');
-      var min = String(now.getMinutes()).padStart(2, '0');
-      return y + '-' + m + '-' + d + 'T' + h + ':' + min;
-    }
-
-    function _populateDoerDropdowns(doers) {
-      _D.doers = doers || [];
-      
-      var ckEmp = document.getElementById('ckEmp');
-      if (ckEmp) {
-        var val = ckEmp.value;
-        ckEmp.innerHTML = '<option value="All">All Employees</option>' +
-          _D.doers.map(function (d) {
-            return '<option value="' + _esc(d.emp_id) + '">' + _esc(d.name) + ' (' + _esc(d.department) + ')</option>';
-          }).join('');
-        if (val) ckEmp.value = val;
-      }
-      
-      var ckWEmp = document.getElementById('ckWEmp');
-      if (ckWEmp) {
-        var val = ckWEmp.value;
-        ckWEmp.innerHTML = _D.doers.map(function (d) {
-          return '<option value="' + _esc(d.emp_id) + '"' + (d.emp_id === _U.emp_code ? ' selected' : '') + '>' + _esc(d.name) + '</option>';
-        }).join('');
-        if (val) ckWEmp.value = val;
-      }
-      
-      var csEmp = document.getElementById('csEmp');
-      if (csEmp) {
-        var val = csEmp.value;
-        csEmp.innerHTML = '<option value="">-- Select Employee --</option>' +
-          _D.doers.map(function (d) {
-            return '<option value="' + _esc(d.emp_id) + '" data-dept="' + _esc(d.department) + '">' + _esc(d.name) + ' (' + _esc(d.department) + ')</option>';
-          }).join('');
-        if (val) csEmp.value = val;
-      }
-    }
-
-    function _ensureDoersLoaded(cb) {
-      if (_D.doers && _D.doers.length) {
-        _populateDoerDropdowns(_D.doers);
-        if (cb) cb();
-      } else {
-        _gas('getDoerList', [], function (doers) {
-          _populateDoerDropdowns(doers);
-          if (cb) cb();
-        }, function () { if (cb) cb(); });
-      }
     }
 
     /* ══════════════════════════════════════════════════════════════════════
@@ -12441,15 +11957,26 @@
     }
     _toast._t = null;
 
-    // ── PWA: Service Worker Registration ──────────────────────────────────
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', function() {
-        navigator.serviceWorker.register('sw.js', { scope: './' })
-          .then(function(reg) { console.log('[SW] Registered, scope:', reg.scope); })
-          .catch(function(e)  { console.warn('[SW] Registration failed:', e); });
-      });
-    }
+    /* ══════════════════════════════════════════════════════════════════════
+       END OF Index_Enhanced.html — Fresko Staff Portal v3.0
+       © 2026 Fresko. All rights reserved.
+       
+       Build:     v3.0
+       Lines:     10,000+
+       Modules:   15 (Dashboard, Checklist, Delegation, Attendance, Leave,
+                       Analytics, Performance, Delegation Analytics,
+                       Attendance Analytics, Muster Report, Employee Directory,
+                       Holiday Calendar, Announcements, Activity Feed, Profile)
+       Bug fixes: TypeError: (d.Timestamp||"").substring is not a function
+                  — fixed via _safeStr() helper in Code_Enhanced.gs
+       Charts:    Chart.js 4.4.0 (Doughnut, Bar, Line, Horizontal Bar)
+       Font:      Plus Jakarta Sans (Google Fonts)
+       Icons:     Font Awesome 6.5.0
+    ══════════════════════════════════════════════════════════════════════ */
 
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(function(){});
+    }
   </script>
 </body>
 

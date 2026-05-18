@@ -4890,9 +4890,11 @@
     ══════════════════════════════════════════════════════════ */
     // ══════════════════════════════════════════════════════════
     // PWA API LAYER — JSONP (replaces google.script.run)
-    // GAS_URL must be set before use (see deployment guide)
+    // Exact same call signature as working GAS version:
+    //   _gas(fn, args, onOk, onErr)
+    //   args are sent as-is, _U appended automatically (like google.script.run did)
     // ══════════════════════════════════════════════════════════
-    var GAS_URL = 'https://script.google.com/macros/s/AKfycbxmGbdW7u9dh3TTpxjw03ZIuC4KPWVmWsrTrsJVk-f5/dev'; // e.g. https://script.google.com/macros/s/AKfy.../exec
+    var GAS_URL = 'https://script.google.com/macros/s/AKfycbxmGbdW7u9dh3TTpxjw03ZIuC4KPWVmWsrTrsJVk-f5/dev';
     var _cbIdx  = 0;
     var _TOKEN  = localStorage.getItem('fk_token') || '';
 
@@ -4905,7 +4907,6 @@
         try { delete window[cbName]; } catch(e2) {}
         var s = document.getElementById('_s_' + cbName);
         if (s) s.parentNode.removeChild(s);
-
         if (r && r.success === false && r.error === 'NOT_AUTHENTICATED') {
           _signOut(); return;
         }
@@ -4916,13 +4917,15 @@
         try { delete window[cbName]; } catch(e2) {}
         var s = document.getElementById('_s_' + cbName);
         if (s) s.parentNode.removeChild(s);
-        console.warn('[GAS TIMEOUT]', fn);
         var e = { message: 'Request timed out. Please try again.' };
         if (onErr) onErr(e); else _toast('Timeout: ' + fn, 'err');
       }, 20000);
 
+      // _U appended just like google.script.run did: (args || []).concat([_U])
+      var fullArgs = (args || []).concat([_U]);
+
       var payload = encodeURIComponent(JSON.stringify({
-        action: fn, args: (args || []), token: _TOKEN || ''
+        action: fn, args: fullArgs, token: _TOKEN || ''
       }));
       var url = GAS_URL + '?callback=' + cbName + '&payload=' + payload;
 
@@ -4939,7 +4942,6 @@
       document.head.appendChild(s);
     }
 
-    // _gasC and _gasT are aliases (used in some attendance/analytics sections)
     function _gasC(fn, args, onOk, onErr) { _gas(fn, args, onOk, onErr); }
     function _gasT(fn, args, onOk, onErr) { _gas(fn, args, onOk, onErr); }
 
@@ -5348,30 +5350,17 @@
 
       var status = res.status || 'not_checked_in';
 
-      // Format time for display
-      // check_in / check_out = "HH:mm" (from GAS IST)
-      // check_in_ts / check_out_ts = "YYYY-MM-DD HH:mm:ss" (full IST timestamp)
       function _fmtAttTime(hhmm, fullTs) {
-        // Prefer full timestamp for richer display
-        if (fullTs && fullTs.length >= 16) {
+        if (fullTs && fullTs.length >= 19) {
           var parts = fullTs.split(' ');
-          if (parts[1]) {
-            // parts[1] = "HH:mm:ss" or "HH:mm"
-            var t = parts[1].substring(0, 5); // "HH:mm"
-            // Show date only if not today
-            var today = new Date().toISOString().slice(0,10);
-            if (parts[0] && parts[0] !== today) {
-              var dp = parts[0].split('-');
-              var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-              var mo = months[parseInt(dp[1], 10) - 1] || dp[1];
-              return dp[2] + ' ' + mo + ', ' + t;
-            }
-            return t; // same day — just show "HH:mm"
+          if (parts.length === 2) {
+            var dp = parts[0].split('-');
+            var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+            var mo = months[parseInt(dp[1],10)-1] || dp[1];
+            return dp[2]+' '+mo+' '+dp[0]+', '+parts[1]+' IST';
           }
         }
-        // Fallback: use plain HH:mm
-        if (hhmm && /^\d{1,2}:\d{2}/.test(hhmm)) return hhmm.substring(0, 5);
-        return '—';
+        return hhmm || '—';
       }
 
       if (status === 'not_checked_in') {
@@ -5393,9 +5382,7 @@
         tm.innerHTML  =
           '<div class="att-punch-time-item"><i class="fas fa-sign-in-alt" style="color:var(--G)"></i>&nbsp;In:&nbsp;<b>'  + _esc(_fmtAttTime(res.check_in,  res.check_in_ts))  + '</b></div>' +
           '<div class="att-punch-time-item"><i class="fas fa-sign-out-alt" style="color:var(--O)"></i>&nbsp;Out:&nbsp;<b>' + _esc(_fmtAttTime(res.check_out, res.check_out_ts)) + '</b></div>' +
-          (res.total_hours && res.total_hours !== '-'
-            ? '<div class="att-punch-time-item"><i class="fas fa-hourglass-end" style="color:var(--P)"></i>&nbsp;Total:&nbsp;<b>' + _esc(res.total_hours) + '</b></div>'
-            : '');
+          (res.total_hours && res.total_hours !== '-' ? '<div class="att-punch-time-item"><i class="fas fa-hourglass-end" style="color:var(--P)"></i>&nbsp;Total:&nbsp;<b>' + _esc(res.total_hours) + '</b></div>' : '');
         btn.className = 'btn-checkin checkin-done';
         btn.innerHTML = '<i class="fas fa-check-double"></i> Checked Out Today';
         btn.disabled  = true;
@@ -5406,18 +5393,16 @@
       var btn = document.getElementById('dashPunchBtn');
       if (!btn || btn.disabled) return;
 
-      var now = new Date();
-      var hhmm = (now.getHours() < 10 ? '0' : '') + now.getHours() + ':' +
-                 (now.getMinutes() < 10 ? '0' : '') + now.getMinutes();
+      var deviceTs = new Date().toISOString(); // ISO format - safe for GAS
 
       if (_punchState === 'not_checked_in') {
-        // CHECK IN — no confirmation needed
+        // CHECK IN
         btn.disabled  = true;
         btn.innerHTML = '<i class="fas fa-circle-notch ci-spinner"></i> Processing...';
-        _gas('recordCheckIn', [], function(res) {
+        _gas('recordCheckIn', [deviceTs], function(res) {
           _punchState = 'checked_in';
-          _toast('✓ Checked in at ' + (res.check_in || hhmm), 'ok');
-          _addNtf('Check IN at ' + (res.check_in || hhmm), 'fa-sign-in-alt', 'var(--Gl)', 'var(--G)');
+          _toast('Checked in successfully at ' + (res.check_in || ''), 'ok');
+          _addNtf('Check IN recorded at ' + (res.check_in || ''), 'fa-sign-in-alt', 'var(--Gl)', 'var(--G)');
           _loadPunchStatus();
         }, function(e) {
           _toast('Check-in failed: ' + e.message, 'err');
@@ -5426,14 +5411,13 @@
         });
 
       } else if (_punchState === 'checked_in') {
-        // CHECK OUT — confirm first
-        if (!confirm('Mark Check OUT at ' + hhmm + '?')) return;
+        // CHECK OUT
         btn.disabled  = true;
         btn.innerHTML = '<i class="fas fa-circle-notch ci-spinner"></i> Processing...';
-        _gas('recordCheckOut', [], function(res) {
+        _gas('recordCheckOut', [deviceTs], function(res) {
           _punchState = 'checked_out';
-          _toast('✓ Checked out at ' + (res.check_out || hhmm) + (res.total_hours && res.total_hours !== '-' ? ' · ' + res.total_hours : ''), 'ok');
-          _addNtf('Check OUT at ' + (res.check_out || hhmm), 'fa-sign-out-alt', 'var(--Ol)', 'var(--O)');
+          _toast('Checked out at ' + (res.check_out || '') + ' · ' + (res.total_hours || ''), 'ok');
+          _addNtf('Check OUT recorded at ' + (res.check_out || ''), 'fa-sign-out-alt', 'var(--Ol)', 'var(--O)');
           _loadPunchStatus();
         }, function(e) {
           _toast('Check-out failed: ' + e.message, 'err');

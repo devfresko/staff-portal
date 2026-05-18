@@ -5321,14 +5321,18 @@
     var _punchState = 'not_checked_in'; // 'not_checked_in' | 'checked_in' | 'checked_out'
 
     function _loadPunchStatus() {
+      // Show Check IN button immediately — don't wait for GAS
+      _punchState = 'not_checked_in';
+      _renderPunchCard({ status: 'not_checked_in' });
+
+      // Then verify actual status from GAS
       _gas('getTodayAttendanceStatus', [], function(res) {
         _punchState = res.status || 'not_checked_in';
         _renderPunchCard(res);
       }, function(err) {
-        var btn = document.getElementById('dashPunchBtn');
-        var st  = document.getElementById('dashPunchStatus');
-        if (st)  st.textContent = 'Status unavailable';
-        if (btn) { btn.disabled = true; btn.textContent = 'Unavailable'; }
+        // Keep button enabled even on error — don't block user
+        var st = document.getElementById('dashPunchStatus');
+        if (st) st.innerHTML = '<span style="color:var(--tx3)"><i class="fas fa-circle-xmark"></i> Not Checked In Yet</span>';
       });
     }
 

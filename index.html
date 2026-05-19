@@ -4873,52 +4873,26 @@
     }());
 
     /* ══════════════════════════════════════════════════════════
-       GAS BRIDGE — PWA JSONP version
-       Exact same signature as before: _gas(fn, args, onOk, onErr)
-       _U appended automatically, token sent for server-side auth
+       GAS BRIDGE — fetch POST
+       JSONP was failing: /exec redirects to echo endpoint (302)
+       fetch POST works correctly with GAS doPost
     ══════════════════════════════════════════════════════════ */
-    var GAS_URL = 'https://script.google.com/macros/s/AKfycbyYEMAgmtcMXxfkbyT0yD8EkcOfbbfCNswHcgc_BTLB8K_cvbQ2sicXm5-GbuO8LF_g_w/exec';
-    var _cbIdx  = 0;
+    var GAS_URL = 'https://script.google.com/macros/s/AKfycbyWdFZ1yeBcab6ZBuoshazXiL7FgKcVqmQ6MtUVk4dmDkcTsaXlUVei-AWMyQ5NDdtpuw/exec';
     var _TOKEN  = '';
 
     function _gas(fn, args, onOk, onErr) {
-      var cbName = '_gcb' + (++_cbIdx);
-      var done = false;
-
-      window[cbName] = function(r) {
-        if (done) return;
-        done = true;
-        try { delete window[cbName]; } catch(x){}
-        var s = document.getElementById('_s_' + cbName);
-        if (s && s.parentNode) s.parentNode.removeChild(s);
-        if (onOk) onOk(r);
-      };
-
-      setTimeout(function() {
-        if (done) return;
-        done = true;
-        // Don't delete window[cbName] here — GAS response may still come
-        var e = { message: 'Request timed out. Please try again.' };
-        if (onErr) onErr(e); else _toast('Timeout: ' + fn, 'err');
-      }, 30000);
-
       var sendArgs = (args || []).concat([_U]);
-      var payload = encodeURIComponent(JSON.stringify({
-        action: fn, args: sendArgs, token: _TOKEN
-      }));
-
-      var s = document.createElement('script');
-      s.id  = '_s_' + cbName;
-      s.src = GAS_URL + '?callback=' + cbName + '&payload=' + payload;
-      s.onerror = function() {
-        if (done) return;
-        done = true;
-        try { delete window[cbName]; } catch(x){}
-        if (s.parentNode) s.parentNode.removeChild(s);
-        var e = { message: 'Network error. Check your connection.' };
-        if (onErr) onErr(e); else _toast('Network error', 'err');
-      };
-      document.head.appendChild(s);
+      fetch(GAS_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: fn, args: sendArgs, token: _TOKEN }),
+        headers: { 'Content-Type': 'text/plain' }
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(r) { if (onOk) onOk(r); })
+      .catch(function(e) {
+        if (onErr) onErr({ message: e.message || 'Network error' });
+        else _toast('Error: ' + (e.message || 'Network error'), 'err');
+      });
     }
 
     /* ══════════════════════════════════════════════════════════
@@ -5134,11 +5108,9 @@
     ══════════════════════════════════════════════════════════ */
     function _doLogin() {
       var email = document.getElementById('femail').value.trim();
-      var pass = document.getElementById('fpass').value.trim();
+      var pass  = document.getElementById('fpass').value.trim();
       var errEl = document.getElementById('loginErr');
-
       errEl.classList.remove('on'); errEl.textContent = '';
-
       if (!email) { errEl.textContent = 'Please enter your email address'; errEl.classList.add('on'); return; }
       if (!pass)  { errEl.textContent = 'Please enter your password';      errEl.classList.add('on'); return; }
 
@@ -5146,18 +5118,15 @@
       btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Signing in...';
       btn.style.opacity = '.65'; btn.style.pointerEvents = 'none';
 
-      var cbName = '_loginCb';
-      var timer;
-
-      window[cbName] = function(r) {
-        clearTimeout(timer);
-        try { delete window[cbName]; } catch(x){}
-        var s = document.getElementById('_s_' + cbName);
-        if (s && s.parentNode) s.parentNode.removeChild(s);
-
+      fetch(GAS_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'processLogin', args: [email, pass], token: '' }),
+        headers: { 'Content-Type': 'text/plain' }
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(r) {
         btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
         btn.style.opacity = '1'; btn.style.pointerEvents = 'auto';
-
         if (r && r.success && r.user) {
           _U = r.user;
           _TOKEN = r.user.email + ':' + (r.user.role || 'STAFF').toLowerCase();
@@ -5166,30 +5135,13 @@
           errEl.textContent = (r && r.error) || 'Invalid email or password';
           errEl.classList.add('on');
         }
-      };
-
-      timer = setTimeout(function() {
-        try { delete window[cbName]; } catch(x){}
-        btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
-        btn.style.opacity = '1'; btn.style.pointerEvents = 'auto';
-        errEl.textContent = 'Server timeout. Please try again.';
-        errEl.classList.add('on');
-      }, 25000);
-
-      var payload = encodeURIComponent(JSON.stringify({
-        action: 'processLogin', args: [email, pass], token: ''
-      }));
-      var s = document.createElement('script');
-      s.id  = '_s_' + cbName;
-      s.src = GAS_URL + '?callback=' + cbName + '&payload=' + payload;
-      s.onerror = function() {
-        clearTimeout(timer);
+      })
+      .catch(function(e) {
         btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Sign In';
         btn.style.opacity = '1'; btn.style.pointerEvents = 'auto';
         errEl.textContent = 'Network error. Check connection.';
         errEl.classList.add('on');
-      };
-      document.head.appendChild(s);
+      });
     }
 
     /* ══════════════════════════════════════════════════════════
@@ -10333,11 +10285,13 @@
 
       if (btnEl) { btnEl.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Signing in…'; btnEl.disabled = true; }
 
-      var cbName = '_loginCb2';
-      window[cbName] = function(res) {
-        try { delete window[cbName]; } catch(x){}
-        var s = document.getElementById('_s_' + cbName);
-        if (s && s.parentNode) s.parentNode.removeChild(s);
+      fetch(GAS_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'processLogin', args: [email, pw], token: '' }),
+        headers: { 'Content-Type': 'text/plain' }
+      })
+      .then(function(r) { return r.json(); })
+      .then(function(res) {
         if (btnEl) { btnEl.innerHTML = '<i class="fas fa-arrow-right-to-bracket"></i> Sign In'; btnEl.disabled = false; }
         if (res && res.success && res.user) {
           _U = res.user;
@@ -10347,17 +10301,11 @@
           if (errEl) { errEl.textContent = (res && res.error) || 'Login failed.'; errEl.classList.add('on'); }
           if (pwEl) pwEl.focus();
         }
-      };
-
-      var payload = encodeURIComponent(JSON.stringify({ action: 'processLogin', args: [email, pw], token: '' }));
-      var s = document.createElement('script');
-      s.id  = '_s_' + cbName;
-      s.src = GAS_URL + '?callback=' + cbName + '&payload=' + payload;
-      s.onerror = function() {
+      })
+      .catch(function(e) {
         if (btnEl) { btnEl.innerHTML = '<i class="fas fa-arrow-right-to-bracket"></i> Sign In'; btnEl.disabled = false; }
         if (errEl) { errEl.textContent = 'Network error. Check connection.'; errEl.classList.add('on'); }
-      };
-      document.head.appendChild(s);
+      });
     }
 
     /* Allow Enter key to submit login form */

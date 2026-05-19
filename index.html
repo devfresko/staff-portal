@@ -5388,7 +5388,9 @@
 
     function _doPunch() {
       var btn = document.getElementById('dashPunchBtn');
-      if (!btn || btn.disabled) return;
+      if (!btn) return;
+      // Don't re-fire if already processing
+      if (btn.innerHTML.indexOf('Processing') !== -1) return;
 
       var deviceTs = new Date().toISOString(); // ISO format - safe for GAS
 

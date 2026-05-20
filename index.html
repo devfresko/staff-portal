@@ -4888,7 +4888,7 @@
        JSONP was failing: /exec redirects to echo endpoint (302)
        fetch POST works correctly with GAS doPost
     ══════════════════════════════════════════════════════════ */
-    var GAS_URL = 'https://script.google.com/macros/s/AKfycbx-DB1GM1pH1g6zoCbNSxWkE1E6Y2lDLX_P9XWnrjBps0ozaAzctys6fdVZbHjWxM72RA/exec';
+    var GAS_URL = 'https://script.google.com/macros/s/AKfycbxx-eoTrZzN8ke3Un-9VevmFy6Lw48nbre25Zj_kvgA2gQnDVg-yNG6aFzp1flIytAB/exec';
     var _TOKEN  = '';
 
     function _gas(fn, args, onOk, onErr) {
@@ -5165,8 +5165,8 @@
 
       // Set up user avatar in sidebar
       var initials = _initials(_U.name);
-      var avaEl = document.getElementById('sbAva');
-      var initEl = document.getElementById('sbAvaInitials');
+      var avaEl    = document.getElementById('sbAva');
+      var initEl   = document.getElementById('sbAvaInitials');
       if (_U.photo) {
         avaEl.innerHTML = '<img src="' + _U.photo + '" alt="' + _esc(_U.name) + '" onerror="this.outerHTML=\'' + initials + '\'">' +
           '<div class="online-dot"></div>';
@@ -5177,22 +5177,41 @@
       document.getElementById('sbName').textContent = _U.name || 'User';
       document.getElementById('sbRole').textContent = (_U.role || 'STAFF') + ' · ' + (_U.dept || '');
 
-      // Show manager nav if needed
       if (_isManager()) document.getElementById('mgrNav').style.display = '';
-
-      // Dark mode
       if (_dark) document.getElementById('darkIco').className = 'fas fa-sun';
-
-      // Initial load
       _applySbCollapseState();
-      _loadV('dash');
-
-      // Side effects: load announcements badge, boot notifications, pre-cache employee directory
-      _loadAnnBadge();
       _bootNtfs();
-      if (_isManager()) {
-        _gas('getEmployeeDirectory', [], function (emps) { _D.empDir = emps || []; });
-      }
+
+      // ── ONE bulk call — load everything at login ──────────────────────────
+      _gas('getAllData', [], function(d) {
+        if (!d) return;
+
+        // Cache everything in _D
+        if (d.dashStats)     _D.dashStats     = d.dashStats;
+        if (d.todayAtt)      _D.todayAtt      = d.todayAtt;
+        if (d.todayTasks)    _D.todayTasks    = d.todayTasks;
+        if (d.announcements) _D.announcements = d.announcements;
+        if (d.leaveBalance)  _D.leaveBalance  = d.leaveBalance;
+        if (d.holidays)      _D.holidays      = d.holidays;
+        if (d.myDelegations) _D.myDelegations = d.myDelegations;
+        if (d.empDir)        _D.empDir        = d.empDir;
+        if (d.myAttendance)  _D.myAttendance  = d.myAttendance;
+        _D.lastFetch = Date.now();
+
+        // Update announcement badge
+        var badge = document.getElementById('annBadge');
+        if (badge && d.announcements && d.announcements.length > 0) {
+          badge.textContent = d.announcements.length;
+          badge.style.display = '';
+        }
+
+        // Render dashboard with cached data
+        _loadV('dash');
+
+      }, function() {
+        // Fallback: load dashboard anyway
+        _loadV('dash');
+      });
     }
     function _bootNtfs() {
       var hr = new Date().getHours();
@@ -5284,18 +5303,19 @@
     var _punchState = 'not_checked_in'; // 'not_checked_in' | 'checked_in' | 'checked_out'
 
     function _loadPunchStatus() {
-      // Show Check IN button immediately — don't wait for GAS
+      // Use cached data if available
+      if (_D.todayAtt) {
+        _punchState = _D.todayAtt.status || 'not_checked_in';
+        _renderPunchCard(_D.todayAtt);
+        return;
+      }
+      // Fallback: fetch fresh
       _punchState = 'not_checked_in';
       _renderPunchCard({ status: 'not_checked_in' });
-
-      // Then verify actual status from GAS
       _gas('getTodayAttendanceStatus', [], function(res) {
+        _D.todayAtt = res;
         _punchState = res.status || 'not_checked_in';
         _renderPunchCard(res);
-      }, function(err) {
-        // Keep button enabled even on error — don't block user
-        var st = document.getElementById('dashPunchStatus');
-        if (st) st.innerHTML = '<span style="color:var(--tx3)"><i class="fas fa-circle-xmark"></i> Not Checked In Yet</span>';
       });
     }
 
@@ -11757,61 +11777,64 @@
     function _loadDash() {
       var kEl = document.getElementById('dashKrow');
 
-      _gas('getDashboardStats', [], function (stats) {
-        var pct = stats.totalTasks > 0 ? Math.round(stats.doneTasks / stats.totalTasks * 100) : 0;
+      // ── Use cached data if available ──────────────────────────────────────
+      function _renderDashStats(stats) {
+        var pct    = stats.totalTasks > 0 ? Math.round(stats.doneTasks / stats.totalTasks * 100) : 0;
         var attClr = stats.myAttendanceToday === 'FD' || stats.myAttendanceToday === 'P' ? 'var(--G)'
           : stats.myAttendanceToday === 'HD' ? 'var(--O)'
-            : stats.myAttendanceToday === '-' ? 'var(--tx3)' : 'var(--R)';
-
+          : stats.myAttendanceToday === '-'  ? 'var(--tx3)' : 'var(--R)';
         if (kEl) kEl.innerHTML = [
-          { lbl: 'Tasks Done', val: stats.doneTasks || 0, c: 'var(--G)', ico: 'fa-check-circle', desc: 'Today' },
-          { lbl: 'Tasks Pending', val: stats.pendingTasks || 0, c: (stats.pendingTasks > 0 ? 'var(--O)' : 'var(--G)'), ico: 'fa-hourglass', desc: 'Today' },
-          { lbl: 'Overdue Delegations', val: stats.overdueDelegations || 0, c: (stats.overdueDelegations > 0 ? 'var(--R)' : 'var(--G)'), ico: 'fa-people-arrows', desc: 'Requiring attention' },
-          { lbl: 'Attendance Today', val: stats.myAttendanceToday || '—', c: attClr, ico: 'fa-fingerprint', desc: 'Current status' },
-          { lbl: 'Announcements', val: stats.unreadAnnouncements || 0, c: 'var(--P)', ico: 'fa-bullhorn', desc: 'Active' }
-        ].map(function (k) {
+          { lbl: 'Tasks Done',          val: stats.doneTasks           || 0,   c: 'var(--G)',                                           ico: 'fa-check-circle',  desc: 'Today' },
+          { lbl: 'Tasks Pending',       val: stats.pendingTasks        || 0,   c: stats.pendingTasks > 0      ? 'var(--O)' : 'var(--G)', ico: 'fa-hourglass',     desc: 'Today' },
+          { lbl: 'Overdue Delegations', val: stats.overdueDelegations  || 0,   c: stats.overdueDelegations > 0 ? 'var(--R)' : 'var(--G)',ico: 'fa-people-arrows', desc: 'Requiring attention' },
+          { lbl: 'Attendance Today',    val: stats.myAttendanceToday   || '—', c: attClr,                                               ico: 'fa-fingerprint',   desc: 'Current status' },
+          { lbl: 'Announcements',       val: stats.unreadAnnouncements || 0,   c: 'var(--P)',                                           ico: 'fa-bullhorn',      desc: 'Active' }
+        ].map(function(k) {
           return '<div class="kpi" style="--kc:' + k.c + ';cursor:default">' +
             '<div class="kpi-ico"><i class="fas ' + k.ico + '"></i></div>' +
             '<div class="kpi-val">' + k.val + '</div>' +
             '<div class="kpi-lbl">' + k.lbl + '</div>' +
-            '<div style="font-size:10px;color:var(--tx3);margin-top:3px">' + k.desc + '</div>' +
-            '</div>';
+            '<div style="font-size:10px;color:var(--tx3);margin-top:3px">' + k.desc + '</div></div>';
         }).join('');
-      }, function () {
-        if (kEl) kEl.innerHTML = '<div class="te" style="grid-column:1/-1"><i class="fas fa-wifi"></i> Could not load dashboard stats. Check connection.</div>';
-      });
+      }
 
-      // Latest 3 announcements
-      _gas('getAnnouncements', [], function (anns) {
+      if (_D.dashStats) {
+        _renderDashStats(_D.dashStats);
+      } else {
+        _gas('getDashboardStats', [], function(stats) { _D.dashStats = stats; _renderDashStats(stats); },
+          function() { if (kEl) kEl.innerHTML = '<div class="te" style="grid-column:1/-1"><i class="fas fa-wifi"></i> Could not load stats.</div>'; });
+      }
+
+      // ── Announcements — use cache ─────────────────────────────────────────
+      function _renderAnn(anns) {
         var el = document.getElementById('dashAnnList');
         if (!el) return;
         var top3 = (anns || []).slice(0, 3);
         if (!top3.length) { el.innerHTML = '<div style="font-size:12px;color:var(--tx3);text-align:center;padding:12px">No active announcements</div>'; return; }
-        el.innerHTML = top3.map(function (a) {
+        el.innerHTML = top3.map(function(a) {
           var pClr = a.priority === 'High' ? 'var(--R)' : a.priority === 'Low' ? 'var(--tx3)' : 'var(--P)';
           return '<div style="padding:8px 0;border-bottom:1px solid var(--bdr2);font-size:12.5px;line-height:1.5">' +
             '<span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:' + pClr + ';margin-right:7px;vertical-align:middle"></span>' +
-            _esc(a.text.slice(0, 80)) + (a.text.length > 80 ? '…' : '') +
-            '</div>';
+            _esc((a.text||'').slice(0, 80)) + (a.text && a.text.length > 80 ? '…' : '') + '</div>';
         }).join('');
-      }, function () { });
+      }
+      if (_D.announcements) { _renderAnn(_D.announcements); }
+      else { _gas('getAnnouncements', [], function(anns) { _D.announcements = anns; _renderAnn(anns); }, function(){}); }
 
-      // Overdue delegations preview
-      _gas('getMyDelegations', ['All'], function (dels) {
+      // ── Overdue delegations — use cache ───────────────────────────────────
+      function _renderDelList(dels) {
         var el = document.getElementById('dashDelList');
         if (!el) return;
-        var over = (dels || []).filter(function (d) { return d.is_overdue; });
-        if (!over.length) {
-          el.innerHTML = '<div style="font-size:12px;color:var(--G);text-align:center;padding:12px"><i class="fas fa-check-circle"></i> No overdue tasks</div>';
-          return;
-        }
-        el.innerHTML = over.slice(0, 3).map(function (d) {
+        var over = (dels || []).filter(function(d) { return d.is_overdue; });
+        if (!over.length) { el.innerHTML = '<div style="font-size:12px;color:var(--G);text-align:center;padding:12px"><i class="fas fa-check-circle"></i> No overdue tasks</div>'; return; }
+        el.innerHTML = over.slice(0, 3).map(function(d) {
           return '<div style="padding:8px 0;border-bottom:1px solid var(--bdr2)">' +
             '<div style="font-size:12.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _esc(d.task_desc) + '</div>' +
-            '<div style="font-size:11px;color:var(--R);margin-top:2px"><i class="fas fa-calendar-xmark"></i> Due: ' + _fmtDate(d.final_date) + '</div>' +
-            '</div>';
+            '<div style="font-size:11px;color:var(--R);margin-top:2px"><i class="fas fa-calendar-xmark"></i> Due: ' + _fmtDate(d.final_date) + '</div></div>';
         }).join('') + (over.length > 3 ? '<div style="font-size:11px;color:var(--tx3);font-weight:700;margin-top:6px">+' + (over.length - 3) + ' more…</div>' : '');
-      }, function () { });
+      }
+      if (_D.myDelegations) { _renderDelList(_D.myDelegations); }
+      else { _gas('getMyDelegations', ['All'], function(dels) { _D.myDelegations = dels; _renderDelList(dels); }, function(){}); }
     }
 
     /* ══════════════════════════════════════════════════════════════════════

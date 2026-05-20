@@ -4888,7 +4888,7 @@
        JSONP was failing: /exec redirects to echo endpoint (302)
        fetch POST works correctly with GAS doPost
     ══════════════════════════════════════════════════════════ */
-    var GAS_URL = 'https://script.google.com/macros/s/AKfycbxFeOrYqI1eR0Pgy1jd_ohYtBp0KEEL4hOayFHfPeE7VtSwdVkHS99xp09r5EN4BYCheQ/exec';
+    var GAS_URL = 'https://script.google.com/macros/s/AKfycbxSGAKIP9gROS7NUr--r_QTqR5z94oqpQ1bwE92RtHHkbxHipst0BKHR9hzPpt-1oBsvg/exec';
     var _TOKEN  = '';
 
     function _gas(fn, args, onOk, onErr) {
@@ -5917,11 +5917,32 @@
       return '<div style="display:grid;grid-template-columns:380px 1fr;gap:20px">' +
         '<div class="card card-nohover card-sm">' +
         '<div class="sec-title" style="margin-bottom:14px"><i class="fas fa-plus-circle" style="color:var(--P)"></i> Add New Task</div>' +
-        '<div class="fgrp"><label>Employee <span class="req">★</span></label><select id="csEmp"><option value="">-- Select Employee --</option></select></div>' +
-        '<div class="fgrp"><label>Task Name <span class="req">★</span></label><input type="text" id="csTask" placeholder="e.g. Daily Report Submission" maxlength="120"></div>' +
-        '<div class="fgrp"><label>Frequency</label><select id="csFreq" onchange="_csFreqChg()"><option value="D">Daily</option><option value="W">Weekly</option><option value="M">Monthly</option></select></div>' +
+        '<div class="form-g">' +
+        '<div class="fgrp"><label>Employee <span class="req">★</span></label>' +
+        '<select id="csEmp" onchange="_csEmpChg(this)"><option value="">-- Select Employee --</option></select></div>' +
+        '<div class="fgrp"><label>Task Name <span class="req">★</span></label>' +
+        '<input type="text" id="csTask" placeholder="e.g. Daily Report Submission" maxlength="120"></div>' +
+        '<div class="fgrp"><label>Frequency <span class="req">★</span></label>' +
+        '<select id="csFreq" onchange="_csFreqChg()">' +
+        '<option value="D">Daily (D)</option>' +
+        '<option value="W">Weekly (W)</option>' +
+        '<option value="F">Fortnightly (F)</option>' +
+        '<option value="M">Monthly (M)</option>' +
+        '<option value="2M">Every 2 Months</option>' +
+        '<option value="Q">Quarterly (Q)</option>' +
+        '<option value="4M">Every 4 Months</option>' +
+        '<option value="H">Half Yearly (H)</option>' +
+        '<option value="Y">Yearly (Y)</option>' +
+        '</select></div>' +
+        '<div class="fgrp"><label>Start Date <span class="req">★</span></label>' +
+        '<input type="date" id="csStartDate" value="' + _today() + '"></div>' +
+        '</div>' +
         '<div id="csFreqX"></div>' +
-        '<button class="btn btn-wide" id="btnSaveTask" onclick="_saveTask()"><i class="fas fa-plus"></i> Add Recurring Task</button>' +
+        '<div style="margin-top:8px;padding:10px 14px;background:var(--sur2);border-radius:8px;font-size:12px;color:var(--tx2)">' +
+        '<i class="fas fa-info-circle" style="color:var(--P)"></i> ' +
+        'Task will be saved to Task List and recurring checklist rows will be auto-generated in ChecklistMaster.' +
+        '</div>' +
+        '<button class="btn btn-wide" id="btnSaveTask" onclick="_saveTask()" style="margin-top:14px"><i class="fas fa-plus"></i> Add Task & Generate Checklist</button>' +
         '</div>' +
         '<div class="card card-nohover card-sm">' +
         '<div class="sec-title" style="margin-bottom:14px"><i class="fas fa-list" style="color:var(--tx2)"></i> Active Tasks</div>' +
@@ -6126,14 +6147,25 @@
       el.innerHTML = _skel(3, 'sk-h4');
 
       if (_isManager() && document.getElementById('csEmp') && document.getElementById('csEmp').options.length <= 1) {
-        _gas('getDoerList', [], function (doers) {
-          _D.doers = doers;
+        var doers = _D.doers || _D.empDir || [];
+        if (doers.length) {
           var sel = document.getElementById('csEmp');
           if (sel) sel.innerHTML = '<option value="">-- Select Employee --</option>' +
-            doers.map(function (d) {
-              return '<option value="' + _esc(d.emp_id) + '" data-dept="' + _esc(d.department) + '">' + _esc(d.name) + ' (' + _esc(d.department) + ')</option>';
+            doers.map(function(d) {
+              return '<option value="' + _esc(d.emp_id || d.user_id) + '" data-dept="' + _esc(d.department || d.dept) + '" data-email="' + _esc(d.email || '') + '">' +
+                _esc(d.name) + ' (' + _esc(d.department || d.dept) + ')</option>';
             }).join('');
-        }, function () { });
+        } else {
+          _gas('getDoerList', [], function(doers) {
+            _D.doers = doers;
+            var sel = document.getElementById('csEmp');
+            if (sel) sel.innerHTML = '<option value="">-- Select Employee --</option>' +
+              doers.map(function(d) {
+                return '<option value="' + _esc(d.emp_id) + '" data-dept="' + _esc(d.department) + '" data-email="' + _esc(d.email || '') + '">' +
+                  _esc(d.name) + ' (' + _esc(d.department) + ')</option>';
+              }).join('');
+          }, function() {});
+        }
       }
 
       _gas('getDeptTasks', ['All', _today()], function (tasks) {
@@ -6161,18 +6193,31 @@
       });
     }
 
+    function _csEmpChg(sel) {
+      // Auto-populate email when employee selected
+    }
+
     function _csFreqChg() {
-      var freq = document.getElementById('csFreq') ? document.getElementById('csFreq').value : 'D';
-      var ex = document.getElementById('csFreqX');
+      var freq = (document.getElementById('csFreq') || {}).value || 'D';
+      var ex   = document.getElementById('csFreqX');
       if (!ex) return;
       if (freq === 'W') {
-        ex.innerHTML = '<div class="fgrp"><label>Day of Week</label>' +
+        ex.innerHTML =
+          '<div class="fgrp"><label>Day of Week</label>' +
           '<select id="csDow">' +
-          '<option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option>' +
-          '<option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option><option value="0">Sunday</option>' +
+          '<option value="1">Monday</option><option value="2">Tuesday</option>' +
+          '<option value="3">Wednesday</option><option value="4">Thursday</option>' +
+          '<option value="5">Friday</option><option value="6">Saturday</option>' +
+          '<option value="0">Sunday</option>' +
           '</select></div>';
-      } else if (freq === 'M') {
-        ex.innerHTML = '<div class="fgrp"><label>Day of Month (1–31)</label><input type="number" id="csDom" min="1" max="31" value="1"></div>';
+      } else if (freq === 'M' || freq === '2M' || freq === 'Q' || freq === '4M' || freq === 'H' || freq === 'Y') {
+        ex.innerHTML =
+          '<div class="fgrp"><label>Day of Month (1–28)</label>' +
+          '<input type="number" id="csDom" min="1" max="28" value="1" placeholder="e.g. 1 for 1st of month"></div>';
+      } else if (freq === 'F') {
+        ex.innerHTML =
+          '<div class="fgrp" style="font-size:12px;color:var(--tx2);padding:8px 0">' +
+          '<i class="fas fa-info-circle"></i> Fortnightly — every 2 weeks from start date</div>';
       } else {
         ex.innerHTML = '';
       }
@@ -6180,25 +6225,50 @@
 
     function _saveTask() {
       if (!_startSub('btnSaveTask')) return;
-      var sel = document.getElementById('csEmp');
-      var taskInp = document.getElementById('csTask');
-      var freqSel = document.getElementById('csFreq');
-      var empId = sel ? sel.value : '';
-      var empOpt = sel ? sel.options[sel.selectedIndex] : null;
-      var empName = empOpt ? empOpt.text : '';
-      var dept = empOpt ? (empOpt.getAttribute('data-dept') || '') : '';
-      var task = taskInp ? taskInp.value.trim() : '';
-      var freq = freqSel ? freqSel.value : 'D';
-      if (!_req(empId, 'Employee') || !_req(task, 'Task Name')) { _endSub('btnSaveTask'); return; }
-      var obj = { emp_id: empId, emp_name: empName, dept: dept, task_name: task, frequency: freq };
-      if (freq === 'W') obj.day_of_week = document.getElementById('csDow') ? Number(document.getElementById('csDow').value) : 1;
-      if (freq === 'M') obj.day_of_month = document.getElementById('csDom') ? Number(document.getElementById('csDom').value) : 1;
-      _gas('saveNewTask', [obj], function (r) {
+
+      var sel        = document.getElementById('csEmp');
+      var taskInp    = document.getElementById('csTask');
+      var freqSel    = document.getElementById('csFreq');
+      var startInp   = document.getElementById('csStartDate');
+
+      var empId      = sel        ? sel.value.trim()        : '';
+      var empOpt     = sel        ? sel.options[sel.selectedIndex] : null;
+      var empName    = empOpt     ? empOpt.text              : '';
+      var dept       = empOpt     ? (empOpt.getAttribute('data-dept') || '') : '';
+      var email      = empOpt     ? (empOpt.getAttribute('data-email') || '') : '';
+      var task       = taskInp    ? taskInp.value.trim()     : '';
+      var freq       = freqSel    ? freqSel.value            : 'D';
+      var startDate  = startInp   ? startInp.value           : _today();
+
+      if (!_req(empId,     'Employee'))   { _endSub('btnSaveTask'); return; }
+      if (!_req(task,      'Task Name'))  { _endSub('btnSaveTask'); return; }
+      if (!_req(startDate, 'Start Date')) { _endSub('btnSaveTask'); return; }
+
+      var obj = {
+        emp_id:     empId,
+        emp_name:   empName.split(' (')[0], // strip dept from display
+        dept:       dept,
+        email:      email,
+        task_name:  task,
+        frequency:  freq,
+        start_date: startDate
+      };
+
+      _gas('saveNewTask', [obj], function(r) {
         _endSub('btnSaveTask');
-        _toast('Task added: ' + r.task_uid, 'ok');
-        if (taskInp) taskInp.value = '';
-        _loadSetupTasks();
-      }, function (e) { _endSub('btnSaveTask'); _toast('Error: ' + e.message, 'err'); });
+        if (r && r.success) {
+          _toast('✓ Task added & checklist generated: ' + r.task_uid, 'ok');
+          if (taskInp) taskInp.value = '';
+          if (startInp) startInp.value = _today();
+          document.getElementById('csFreqX').innerHTML = '';
+          _loadSetupTasks();
+        } else {
+          _toast('Error: ' + (r && r.error ? r.error : 'Unknown error'), 'err');
+        }
+      }, function(e) {
+        _endSub('btnSaveTask');
+        _toast('Error: ' + e.message, 'err');
+      });
     }
     function _deactivateTask(btn) {
       var uid = btn.getAttribute('data-uid');

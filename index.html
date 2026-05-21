@@ -5997,21 +5997,28 @@
         if (domEl) obj.day_of_month = Number(domEl.value) || 1;
       }
 
-      _gas('saveNewTask', [obj], function(r) {
-        _endSub('btnSaveTask');
-        if (r && r.success) {
-          _toast('✓ Task added & checklist generated: ' + r.task_uid, 'ok');
-          if (taskInp) taskInp.value = '';
-          if (startInp) startInp.value = _today();
-          document.getElementById('csFreqX').innerHTML = '';
-          _loadSetupTasks();
-        } else {
-          _toast('Error: ' + (r && r.error ? r.error : 'Unknown error'), 'err');
-        }
-      }, function(e) {
-        _endSub('btnSaveTask');
-        _toast('Error: ' + e.message, 'err');
-      });
+ _gas('saveNewTask', [obj], function(r) {
+  _endSub('btnSaveTask');
+  if (r && r.success) {
+
+    // ← YE ADD KARO
+    if (r.warn) {
+      _toast('Task saved but checklist failed: ' + r.warn, 'warn');
+    } else {
+      _toast('✓ Task added & checklist generated: ' + r.task_uid, 'ok');
+    }
+
+    if (taskInp) taskInp.value = '';
+    if (startInp) startInp.value = _today();
+    document.getElementById('csFreqX').innerHTML = '';
+    _loadSetupTasks();
+  } else {
+    _toast('Error: ' + (r && r.error ? r.error : 'Unknown error'), 'err');
+  }
+}, function(e) {
+  _endSub('btnSaveTask');
+  _toast('Error: ' + e.message, 'err');
+});
     }
     function _deactivateTask(btn) {
       var uid = btn.getAttribute('data-uid');

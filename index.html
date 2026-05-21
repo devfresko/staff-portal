@@ -4885,6 +4885,52 @@ function _gas(fn, args, onOk, onErr) {
   document.head.appendChild(script);
 }
 
+
+
+    // Custom timeout wala _gas
+function _gasX(fn, args, timeout, onOk, onErr) {
+  var sendArgs = (args || []).concat([_U]);
+  var cb  = '_cb' + Date.now() + Math.floor(Math.random() * 9999);
+  var payload = encodeURIComponent(JSON.stringify({ action: fn, args: sendArgs }));
+  var url = GAS_URL + '?callback=' + cb + '&payload=' + payload;
+
+  var done   = false;
+  var script = document.createElement('script');
+
+  var timer = setTimeout(function() {
+    if (done) return;
+    done = true;
+    script.remove();
+    delete window[cb];
+    if (onErr) onErr({ message: 'Request timeout after ' + (timeout/1000) + 's' });
+  }, timeout || 15000); // ← custom timeout
+
+  window[cb] = function(data) {
+    if (done) return;
+    done = true;
+    clearTimeout(timer);
+    script.remove();
+    delete window[cb];
+    if (data && data.success === false && data.error) {
+      if (onErr) onErr({ message: data.error });
+    } else {
+      if (onOk) onOk(data);
+    }
+  };
+
+  script.onerror = function() {
+    if (done) return;
+    done = true;
+    clearTimeout(timer);
+    script.remove();
+    delete window[cb];
+    if (onErr) onErr({ message: 'Network error' });
+  };
+
+  script.src = url;
+  document.head.appendChild(script);
+}
+
     /* ══════════════════════════════════════════════════════════
        CSV EXPORT
     ══════════════════════════════════════════════════════════ */
@@ -11182,7 +11228,8 @@ function _deactivateTask(uid) {
     '<p style="font-size:14px;color:var(--tx2);line-height:1.6">Remove this task from the recurring list? This cannot be undone.</p>',
     function() {
       _closeModal();
-      _gas('deactivateTask', [uid], function() {
+      // ← Deactivate ke liye longer timeout wala call
+      _gasX('deactivateTask', [uid], 30000, function() {
         _toast('Task deactivated', 'ok');
         _loadSetupTasks();
       }, function(e) {

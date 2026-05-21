@@ -5940,7 +5940,7 @@ function _loadSetupTasks() {
           '<span>' + _esc(t.emp_name) + '</span><span>·</span><span>' + _esc(t.dept) + '</span>' +
           _freqBadge(t.frequency) +
           '</div></div>' +
-          '<button class="btn btn-red btn-xs" data-uid="' + _esc(t.task_uid) + '" ' +
+          '<button class="btn btn-red btn-xs" onclick="_deactivateTask(\'' + _esc(t.task_uid) + '\')" title="Deactivate"><i class="fas fa-times"></i></button>'
           'onclick="_deactivateTask(this)" title="Deactivate">' +
           '<i class="fas fa-times"></i></button>' +
           '</div>';

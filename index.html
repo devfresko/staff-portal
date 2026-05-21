@@ -5886,39 +5886,53 @@ function _gas(fn, args, onOk, onErr) {
       _downloadCSV('task_history_' + _today() + '.csv', rows);
     }
 
-    function _loadSetupTasks() {
-      var el = document.getElementById('setupTaskList');
-      if (!el) return;
-      el.innerHTML = _skel(3, 'sk-h4');
+function _loadSetupTasks() {
+  var el = document.getElementById('setupTaskList');
+  if (!el) return;
+  el.innerHTML = _skel(3, 'sk-h4');
 
-      if (_isManager() && document.getElementById('csEmp') && document.getElementById('csEmp').options.length <= 1) {
-        var doers = _D.doers || _D.empDir || [];
-        if (doers.length) {
-          var sel = document.getElementById('csEmp');
-          if (sel) sel.innerHTML = '<option value="">-- Select Employee --</option>' +
-            doers.map(function(d) {
-              return '<option value="' + _esc(d.emp_id || d.user_id) + '" data-dept="' + _esc(d.department || d.dept) + '" data-email="' + _esc(d.email || '') + '">' +
-                _esc(d.name) + ' (' + _esc(d.department || d.dept) + ')</option>';
-            }).join('');
-        } else {
-         _gas('getDoerList', [], function(doers) {
-      _D.doers = doers; // cache update bhi ho jaayega
-      var sel = document.getElementById('csEmp');
-      if (!sel) return;
+  if (_isManager() && document.getElementById('csEmp') && 
+      document.getElementById('csEmp').options.length <= 1) {
+    
+    var sel = document.getElementById('csEmp');
+    sel.innerHTML = '<option value="">⏳ Loading employees...</option>';
+
+    // ← Pehle cache check karo
+    var cached = _D.doers || _D.empDir || [];
+    if (cached.length) {
       sel.innerHTML = '<option value="">-- Select Employee --</option>' +
-        doers.map(function(d) {
-          return '<option value="' + _esc(d.emp_id) + '" ' +
-            'data-dept="'  + _esc(d.department) + '" ' +
+        cached.map(function(d) {
+          return '<option value="' + _esc(d.emp_id || d.user_id) + '" ' +
+            'data-dept="'  + _esc(d.department || d.dept) + '" ' +
             'data-email="' + _esc(d.email || '') + '">' +
-            _esc(d.name) + ' (' + _esc(d.department) + ')' +
+            _esc(d.name) + ' (' + _esc(d.department || d.dept) + ')' +
             '</option>';
         }).join('');
-    }, function(e) {
-      _toast('Could not load employees: ' + e.message, 'err');
-    });
-  }
+    } else {
+      // ← Fresh call
+      _gas('getDoerList', [], function(doers) {
+        _D.doers = doers;
+        var sel2 = document.getElementById('csEmp');
+        if (!sel2) return;
+        if (!doers || !doers.length) {
+          sel2.innerHTML = '<option value="">⚠️ No employees found</option>';
+          return;
         }
-      }
+        sel2.innerHTML = '<option value="">-- Select Employee --</option>' +
+          doers.map(function(d) {
+            return '<option value="' + _esc(d.emp_id) + '" ' +
+              'data-dept="'  + _esc(d.department) + '" ' +
+              'data-email="' + _esc(d.email || '') + '">' +
+              _esc(d.name) + ' (' + _esc(d.department) + ')' +
+              '</option>';
+          }).join('');
+      }, function(e) {
+        var sel2 = document.getElementById('csEmp');
+        if (sel2) sel2.innerHTML = '<option value="">❌ Error loading</option>';
+        _toast('Employee load failed: ' + e.message, 'err');
+      });
+    }
+  }
 
       _gas('getDeptTasks', ['All', _today()], function (tasks) {
         var seen = {}; var list = [];

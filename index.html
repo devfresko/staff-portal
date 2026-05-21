@@ -9704,13 +9704,7 @@ function _loadSetupTasks() {
       }, function (e) { _toast('Error: ' + e.message, 'err'); });
     }
 
-    function _loadWeek() { /* Handled by getWeeklyTasks — see cweek pane */ }
-    function _loadHist() { /* Handled by getTaskHistory — see chist pane */ }
-    // function _loadSetupTasks() { /* Handled by getTaskSetup — see csetup pane (manager) */ }
-    function _loadDelMine() { /* Handled by getMyDelegations — see dmine pane */ }
-    function _loadDelOut() { /* Handled by getMyDelegatedOut — see dout pane */ }
-    function _loadDelAll() { /* Handled by getAllDelegations — see dall pane (manager) */ }
-    function _loadDelCreate() { /* Handled by createDelegation form — see dcr pane */ }
+    // stubs removed — actual implementations handle these
     function _loadLeaveReq() { _loadMyLeaveReqs(); }
     function _loadLeaveSumm() { _loadLeave(); }
     function _loadLeaveReq() { _loadMyLeaves(); }

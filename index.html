@@ -4852,20 +4852,51 @@
     var GAS_URL = 'https://script.google.com/macros/s/AKfycbz89dAT6kF2fWyDQNr5Eob-ToSP7VioxlYsTgp0vSuVTGOucdxVUtlvrt3RmOvOaDg_YQ/exec';
     var _TOKEN  = '';
 
-    function _gas(fn, args, onOk, onErr) {
-      var sendArgs = (args || []).concat([_U]);
-      fetch(GAS_URL, {
-        method: 'POST',
-        body: JSON.stringify({ action: fn, args: sendArgs, token: _TOKEN }),
-        headers: { 'Content-Type': 'text/plain' }
-      })
-      .then(function(r) { return r.json(); })
-      .then(function(r) { if (onOk) onOk(r); })
-      .catch(function(e) {
-        if (onErr) onErr({ message: e.message || 'Network error' });
-        else _toast('Error: ' + (e.message || 'Network error'), 'err');
-      });
+function _gas(fn, args, onOk, onErr) {
+  var sendArgs = (args || []).concat([_U]);
+  var cb  = '_cb' + Date.now() + Math.floor(Math.random() * 9999);
+  var payload = encodeURIComponent(JSON.stringify({ action: fn, args: sendArgs }));
+  var url = GAS_URL + '?callback=' + cb + '&payload=' + payload;
+
+  var done   = false;
+  var script = document.createElement('script');
+
+  var timer = setTimeout(function() {
+    if (done) return;
+    done = true;
+    script.remove();
+    delete window[cb];
+    if (onErr) onErr({ message: 'Network error. Check connection.' });
+    else _toast('Network error. Check connection.', 'err');
+  }, 15000);
+
+  window[cb] = function(data) {
+    if (done) return;
+    done = true;
+    clearTimeout(timer);
+    script.remove();
+    delete window[cb];
+    if (data && data.success === false && data.error) {
+      if (onErr) onErr({ message: data.error });
+      else _toast('Error: ' + data.error, 'err');
+    } else {
+      if (onOk) onOk(data);
     }
+  };
+
+  script.onerror = function() {
+    if (done) return;
+    done = true;
+    clearTimeout(timer);
+    script.remove();
+    delete window[cb];
+    if (onErr) onErr({ message: 'Network error. Check connection.' });
+    else _toast('Network error. Check connection.', 'err');
+  };
+
+  script.src = url;
+  document.head.appendChild(script);
+}
 
     /* ══════════════════════════════════════════════════════════
        CSV EXPORT

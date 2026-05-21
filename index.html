@@ -5891,63 +5891,33 @@ function _loadSetupTasks() {
   if (!el) return;
   el.innerHTML = _skel(3, 'sk-h4');
 
-  // ── Employee dropdown — sirf tab load karo jab empty ho ──
+  // ── Employee dropdown — hamesha fresh load ──
   if (_isManager()) {
     var sel = document.getElementById('csEmp');
-    if (sel && sel.options.length <= 1) {
+    if (sel) {
       sel.innerHTML = '<option value="">⏳ Loading...</option>';
-
-      var cached = _D.doers || [];
-      if (cached.length) {
-        sel.innerHTML = '<option value="">-- Select Employee --</option>' +
-          cached.map(function(d) {
-            return '<option value="' + _esc(d.emp_id || d.user_id) + '" ' +
-              'data-dept="' + _esc(d.department || d.dept) + '" ' +
+      _gas('getDoerList', [], function(doers) {
+        _D.doers = doers;
+        var s = document.getElementById('csEmp');
+        if (!s) return;
+        s.innerHTML = '<option value="">-- Select Employee --</option>' +
+          doers.map(function(d) {
+            return '<option value="' + _esc(d.emp_id) + '" ' +
+              'data-dept="' + _esc(d.department) + '" ' +
               'data-email="' + _esc(d.email || '') + '">' +
-              _esc(d.name) + ' (' + _esc(d.department || d.dept) + ')' +
+              _esc(d.name) + ' (' + _esc(d.department) + ')' +
               '</option>';
           }).join('');
-      } else {
-        _gas('getDoerList', [], function(doers) {
-          _D.doers = doers;
-          // Fresh reference — DOM change ho sakta hai
-          var sel2 = document.getElementById('csEmp');
-          if (!sel2) return;
-          sel2.innerHTML = '<option value="">-- Select Employee --</option>' +
-            doers.map(function(d) {
-              return '<option value="' + _esc(d.emp_id) + '" ' +
-                'data-dept="' + _esc(d.department) + '" ' +
-                'data-email="' + _esc(d.email || '') + '">' +
-                _esc(d.name) + ' (' + _esc(d.department) + ')' +
-                '</option>';
-            }).join('');
-        }, function(e) {
-          var sel2 = document.getElementById('csEmp');
-          if (sel2) sel2.innerHTML = '<option value="">-- Select Employee --</option>';
-          _toast('Employee load failed: ' + e.message, 'err');
-        });
-      }
+      }, function(e) {
+        var s = document.getElementById('csEmp');
+        if (s) s.innerHTML = '<option value="">-- Select Employee --</option>';
+        _toast('Employee load failed: ' + e.message, 'err');
+      });
     }
   }
 
-  // ── Active Tasks list ────────────────────────────────────
+  // ── Active Tasks ──
   _gas('getDeptTasks', ['All', _today()], function(tasks) {
-    // getDeptTasks ke response aane tak csEmp wipe ho sakta hai —
-    // isliye response aane ke baad ek baar aur check karo
-    if (_isManager()) {
-      var selCheck = document.getElementById('csEmp');
-      if (selCheck && selCheck.options.length <= 1 && _D.doers && _D.doers.length) {
-        selCheck.innerHTML = '<option value="">-- Select Employee --</option>' +
-          _D.doers.map(function(d) {
-            return '<option value="' + _esc(d.emp_id || d.user_id) + '" ' +
-              'data-dept="' + _esc(d.department || d.dept) + '" ' +
-              'data-email="' + _esc(d.email || '') + '">' +
-              _esc(d.name) + ' (' + _esc(d.department || d.dept) + ')' +
-              '</option>';
-          }).join('');
-      }
-    }
-
     var el2 = document.getElementById('setupTaskList');
     if (!el2) return;
     var seen = {}; var list = [];
@@ -5965,12 +5935,9 @@ function _loadSetupTasks() {
       list.map(function(t) {
         return '<div style="background:var(--bg);border:1px solid var(--bdr);border-radius:9px;padding:9px 12px;display:flex;align-items:center;gap:10px">' +
           '<div style="flex:1;min-width:0">' +
-          '<div style="font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' +
-          _esc(t.task_name) + '</div>' +
+          '<div style="font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _esc(t.task_name) + '</div>' +
           '<div style="font-size:10.5px;color:var(--tx2);margin-top:2px;display:flex;align-items:center;gap:8px">' +
-          '<span>' + _esc(t.emp_name) + '</span>' +
-          '<span>·</span>' +
-          '<span>' + _esc(t.dept) + '</span>' +
+          '<span>' + _esc(t.emp_name) + '</span><span>·</span><span>' + _esc(t.dept) + '</span>' +
           _freqBadge(t.frequency) +
           '</div></div>' +
           '<button class="btn btn-red btn-xs" data-uid="' + _esc(t.task_uid) + '" ' +

@@ -6012,7 +6012,7 @@ function _loadSetupTasks() {
       var email      = empOpt     ? (empOpt.getAttribute('data-email') || '') : '';
       var task       = taskInp    ? taskInp.value.trim()     : '';
       var freq       = freqSel    ? freqSel.value            : 'D';
-      var startDate  = startInp   ? startInp.value           : _today();
+      var startDate  = startInp   ? startInp.value.substring(0, 10) : _today();
 
       if (!_req(empId,     'Employee'))   { _endSub('btnSaveTask'); return; }
       if (!_req(task,      'Task Name'))  { _endSub('btnSaveTask'); return; }

@@ -11185,6 +11185,24 @@ function _loadSetupTasks() {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('sw.js').catch(function(){});
     }
+
+
+function _deactivateTask(uid) {  // ← btn ki jagah uid directly
+  _openModal('<i class="fas fa-trash" style="color:var(--R)"></i> Deactivate Task',
+    '<p style="font-size:14px;color:var(--tx2);line-height:1.6">Remove this task from the recurring list? This cannot be undone.</p>',
+    function() {
+      _closeModal();
+      _gas('deactivateTask', [uid], function() { 
+        _toast('Task deactivated', 'ok'); 
+        _loadSetupTasks(); 
+      }, function(e) { 
+        _toast('Error: ' + e.message, 'err'); 
+      });
+    }, '<i class="fas fa-trash"></i> Deactivate');
+}
+
+
+    
   </script>
 </body>
 

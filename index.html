@@ -4767,20 +4767,20 @@
        MODAL SYSTEM
     ══════════════════════════════════════════════════════════ */
     var _modalCb = null;
-    function _openModal(title, body, onOk, okLabel, isWide) {
-      document.getElementById('mTitle').innerHTML = title;
-      document.getElementById('mBody').innerHTML = body;
-      _modalCb = onOk || null;
-      var foot = '<button class="btn btn-outline" onclick="_closeModal()">Cancel</button>';
-      if (onOk) {
-        foot += '<button class="btn" id="mOkBtn" onclick="(_modalCb && _modalCb())">' +
-          (okLabel || 'Confirm') + '</button>';
-      }
-      document.getElementById('mFoot').innerHTML = foot;
-      var m = document.getElementById('modal');
-      m.className = 'modal-box on' + (isWide ? ' wide' : '');
-      document.getElementById('mOv').classList.add('on');
-    }
+    // function _openModal(title, body, onOk, okLabel, isWide) {
+    //   document.getElementById('mTitle').innerHTML = title;
+    //   document.getElementById('mBody').innerHTML = body;
+    //   _modalCb = onOk || null;
+    //   var foot = '<button class="btn btn-outline" onclick="_closeModal()">Cancel</button>';
+    //   if (onOk) {
+    //     foot += '<button class="btn" id="mOkBtn" onclick="(_modalCb && _modalCb())">' +
+    //       (okLabel || 'Confirm') + '</button>';
+    //   }
+    //   document.getElementById('mFoot').innerHTML = foot;
+    //   var m = document.getElementById('modal');
+    //   m.className = 'modal-box on' + (isWide ? ' wide' : '');
+    //   document.getElementById('mOv').classList.add('on');
+    // }
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') {
         _closeModal();
@@ -9510,7 +9510,7 @@ function _loadSetupTasks() {
         if (cb) cb.focus();
       }, 100);
     }
-
+    
     function _closeModal() {
       var ov = document.getElementById('mOv');
       var modal = document.getElementById('modal');

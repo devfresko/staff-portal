@@ -5973,10 +5973,8 @@ function _loadSetupTasks() {
           '<span>' + _esc(t.emp_name) + '</span><span>·</span><span>' + _esc(t.dept) + '</span>' +
           _freqBadge(t.frequency) +
           '</div></div>' +
-          '<button class="btn btn-red btn-xs" onclick="_deactivateTask(\'' + _esc(t.task_uid) + '\')" title="Deactivate"><i class="fas fa-times"></i></button>'
-          'onclick="_deactivateTask(this)" title="Deactivate">' +
-          '<i class="fas fa-times"></i></button>' +
-          '</div>';
+          '<button class="btn btn-red btn-xs" onclick="_deactivateTask(\'' + _esc(t.task_uid) + '\')" title="Deactivate"><i class="fas fa-times"></i></button>' +
+'</div>';
       }).join('') + '</div>';
   });
 }
@@ -11225,12 +11223,11 @@ function _loadSetupTasks() {
 function _deactivateTask(uid) {
   _openModal(
     '<i class="fas fa-trash" style="color:var(--R)"></i> Deactivate Task',
-    '<p style="font-size:14px;color:var(--tx2);line-height:1.6">Remove this task from the recurring list? This cannot be undone.</p>',
+    '<p style="font-size:14px;color:var(--tx2);line-height:1.6">Remove this task from the recurring list? This cannot be undone. Future checklist rows will also be deleted.</p>',
     function() {
       _closeModal();
-      // ← Deactivate ke liye longer timeout wala call
-      _gasX('deactivateTask', [uid], 30000, function() {
-        _toast('Task deactivated', 'ok');
+      _gasX('deactivateTask', [uid], 30000, function(r) {
+        _toast('Task deactivated — ' + (r.checklistRowsDeleted || 0) + ' checklist rows removed', 'ok');
         _loadSetupTasks();
       }, function(e) {
         _toast('Error: ' + e.message, 'err');

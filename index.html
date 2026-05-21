@@ -5870,15 +5870,22 @@
                 _esc(d.name) + ' (' + _esc(d.department || d.dept) + ')</option>';
             }).join('');
         } else {
-          _gas('getDoerList', [], function(doers) {
-            _D.doers = doers;
-            var sel = document.getElementById('csEmp');
-            if (sel) sel.innerHTML = '<option value="">-- Select Employee --</option>' +
-              doers.map(function(d) {
-                return '<option value="' + _esc(d.emp_id) + '" data-dept="' + _esc(d.department) + '" data-email="' + _esc(d.email || '') + '">' +
-                  _esc(d.name) + ' (' + _esc(d.department) + ')</option>';
-              }).join('');
-          }, function() {});
+         _gas('getDoerList', [], function(doers) {
+      _D.doers = doers; // cache update bhi ho jaayega
+      var sel = document.getElementById('csEmp');
+      if (!sel) return;
+      sel.innerHTML = '<option value="">-- Select Employee --</option>' +
+        doers.map(function(d) {
+          return '<option value="' + _esc(d.emp_id) + '" ' +
+            'data-dept="'  + _esc(d.department) + '" ' +
+            'data-email="' + _esc(d.email || '') + '">' +
+            _esc(d.name) + ' (' + _esc(d.department) + ')' +
+            '</option>';
+        }).join('');
+    }, function(e) {
+      _toast('Could not load employees: ' + e.message, 'err');
+    });
+  }
         }
       }
 

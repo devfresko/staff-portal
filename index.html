@@ -5818,21 +5818,7 @@ function _gasX(fn, args, timeout, onOk, onErr) {
 
 
 
-    function _markDone(btn) {
-      var uid = btn.getAttribute('data-uid');
-      var date = btn.getAttribute('data-dt');
-      btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>';
-      btn.disabled = true;
-      _gas('markTaskDone', [uid, date, ''], function () {
-        _toast('Task marked as done!', 'ok');
-        _addNtf('Task completed!', 'fa-check-circle', 'var(--Gl)', 'var(--G)');
-        _loadToday();
-      }, function (e) {
-        _toast('Error: ' + e.message, 'err');
-        btn.innerHTML = '<i class="fas fa-check"></i> Done';
-        btn.disabled = false;
-      });
-    }
+    // _markDone handled below at line 9699 — do not duplicate
 
     function _loadWeek() {
       var wk = document.getElementById('ckWeek') ? Number(document.getElementById('ckWeek').value) : _currentWeek();
@@ -9697,11 +9683,23 @@ function _loadSetupTasks() {
     }
 
     function _markDone(taskUid, date) {
-      _gas('markTaskDone', [taskUid, date, ''], function () {
-        _toast('Task marked as done!', 'ok');
-        _addNtf('Task completed', 'fa-check-circle', 'var(--Gl)', 'var(--G)');
+      // Button ko loading state mein daalo
+      var btns = document.querySelectorAll('[onclick*="' + taskUid + '"]');
+      btns.forEach(function(b) {
+        b.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>';
+        b.disabled = true;
+      });
+      _gas('markTaskDone', [taskUid, date, ''], function() {
+        _toast('✓ Task marked as done!', 'ok');
+        _addNtf('Task completed!', 'fa-check-circle', 'var(--Gl)', 'var(--G)');
         _loadToday();
-      }, function (e) { _toast('Error: ' + e.message, 'err'); });
+      }, function(e) {
+        _toast('Error: ' + e.message, 'err');
+        btns.forEach(function(b) {
+          b.innerHTML = '<i class="fas fa-check"></i> Done';
+          b.disabled = false;
+        });
+      });
     }
 
     // stubs removed — actual implementations above handle these

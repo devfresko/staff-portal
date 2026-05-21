@@ -4836,7 +4836,7 @@
        JSONP was failing: /exec redirects to echo endpoint (302)
        fetch POST works correctly with GAS doPost
     ══════════════════════════════════════════════════════════ */
-    var GAS_URL = 'https://script.google.com/macros/s/AKfycbwbHZWwjI_K5NqmY-XfF4EDtVGSg0pb7r8fd5YT465QFmpzZZBBKr3GQZFwKYl5iIm7IQ/exec';
+    var GAS_URL = 'https://script.google.com/macros/s/AKfycbysrdLfTtqmXVPmRFJCJoc4MeQLm1Iub1Tus7gnqV4zODT0M-QTYiLQ9L08jZQK58jMMg/exec';
     var _TOKEN  = '';
 
 function _gas(fn, args, onOk, onErr) {
@@ -6043,7 +6043,7 @@ function _loadSetupTasks() {
       var email      = empOpt     ? (empOpt.getAttribute('data-email') || '') : '';
       var task       = taskInp    ? taskInp.value.trim()     : '';
       var freq       = freqSel    ? freqSel.value            : 'D';
-      var startDate  = startInp   ? startInp.value.substring(0, 10) : _today();
+      var startDate = startInp ? startInp.value : _today();
 
       if (!_req(empId,     'Employee'))   { _endSub('btnSaveTask'); return; }
       if (!_req(task,      'Task Name'))  { _endSub('btnSaveTask'); return; }
@@ -6092,22 +6092,26 @@ function _loadSetupTasks() {
   _toast('Error: ' + e.message, 'err');
 });
     }
-    function _deactivateTask(uid) {
-      _openModal(
-        '<i class="fas fa-trash" style="color:var(--R)"></i> Deactivate Task',
-        '<p style="font-size:14px;color:var(--tx2);line-height:1.6">Remove this task from the recurring list? This cannot be undone. Future checklist rows will also be deleted.</p>',
-        function() {
-          _closeModal();
-          _gasX('deactivateTask', [uid], 30000, function(r) {
-            _toast('Task deactivated — ' + (r.checklistRowsDeleted || 0) + ' checklist rows removed', 'ok');
-            _loadSetupTasks();
-          }, function(e) {
-            _toast('Error: ' + e.message, 'err');
-          });
-        },
-        '<i class="fas fa-trash"></i> Deactivate'
-      );
-    }
+
+
+  function _deactivateTask(uid) {
+  _openModal(
+    '<i class="fas fa-trash" style="color:var(--R)"></i> Deactivate Task',
+    '<p style="font-size:14px;color:var(--tx2);line-height:1.6">Remove this task from the recurring list? This cannot be undone. Future checklist rows will also be deleted.</p>',
+    function() {
+      _closeModal();
+      // ← Loading toast
+      _toast('<i class="fas fa-circle-notch fa-spin"></i> Deleting task...', 'info');
+      _gasX('deactivateTask', [uid], 30000, function(r) {
+        _toast('✓ Task deleted — ' + (r.checklistRowsDeleted || 0) + ' checklist rows removed', 'ok');
+        _loadSetupTasks();
+      }, function(e) {
+        _toast('Error: ' + e.message, 'err');
+      });
+    },
+    '<i class="fas fa-trash"></i> Deactivate'
+  );
+}
 
     /* ══════════════════════════════════════════════════════════
        DELEGATION MODULE

@@ -9487,12 +9487,23 @@ function _loadSetupTasks() {
       if (bEl) bEl.innerHTML = body || '';
       if (fEl) fEl.innerHTML =
         '<button class="btn btn-outline" onclick="_closeModal()"><i class="fas fa-times"></i> Cancel</button>' +
-        (onConfirm ? '<button class="btn" id="mConfirmBtn" onclick="(' + onConfirm.toString() + ')()">' + (confirmLabel || 'Confirm') + '</button>' : '');
+        (onConfirm ? '<button class="btn" id="mConfirmBtn">' + (confirmLabel || 'Confirm') + '</button>' : '');
 
       ov.style.display = 'block';
       modal.style.display = 'block';
       modal.classList.add('open');
 
+      if (onConfirm) {
+  setTimeout(function() {
+    var cb = document.getElementById('mConfirmBtn');
+    if (cb) {
+      cb.onclick = onConfirm;  // ← function reference directly assign karo
+      cb.focus();
+    }
+  }, 100);
+}
+
+        
       // Focus confirm button
       setTimeout(function () {
         var cb = document.getElementById('mConfirmBtn');
@@ -11187,18 +11198,21 @@ function _loadSetupTasks() {
     }
 
 
-function _deactivateTask(uid) {  // ← btn ki jagah uid directly
-  _openModal('<i class="fas fa-trash" style="color:var(--R)"></i> Deactivate Task',
+function _deactivateTask(uid) {
+  _openModal(
+    '<i class="fas fa-trash" style="color:var(--R)"></i> Deactivate Task',
     '<p style="font-size:14px;color:var(--tx2);line-height:1.6">Remove this task from the recurring list? This cannot be undone.</p>',
     function() {
       _closeModal();
-      _gas('deactivateTask', [uid], function() { 
-        _toast('Task deactivated', 'ok'); 
-        _loadSetupTasks(); 
-      }, function(e) { 
-        _toast('Error: ' + e.message, 'err'); 
+      _gas('deactivateTask', [uid], function() {
+        _toast('Task deactivated', 'ok');
+        _loadSetupTasks();
+      }, function(e) {
+        _toast('Error: ' + e.message, 'err');
       });
-    }, '<i class="fas fa-trash"></i> Deactivate');
+    },
+    '<i class="fas fa-trash"></i> Deactivate'
+  );
 }
 
 

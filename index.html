@@ -6092,14 +6092,21 @@ function _loadSetupTasks() {
   _toast('Error: ' + e.message, 'err');
 });
     }
-    function _deactivateTask(btn) {
-      var uid = btn.getAttribute('data-uid');
-      _openModal('<i class="fas fa-trash" style="color:var(--R)"></i> Deactivate Task',
-        '<p style="font-size:14px;color:var(--tx2);line-height:1.6">Remove this task from the recurring list? This cannot be undone. Future task logs will no longer be generated.</p>',
-        function () {
+    function _deactivateTask(uid) {
+      _openModal(
+        '<i class="fas fa-trash" style="color:var(--R)"></i> Deactivate Task',
+        '<p style="font-size:14px;color:var(--tx2);line-height:1.6">Remove this task from the recurring list? This cannot be undone. Future checklist rows will also be deleted.</p>',
+        function() {
           _closeModal();
-          _gas('deactivateTask', [uid], function () { _toast('Task deactivated', 'ok'); _loadSetupTasks(); }, function (e) { _toast('Error: ' + e.message, 'err'); });
-        }, '<i class="fas fa-trash"></i> Deactivate');
+          _gasX('deactivateTask', [uid], 30000, function(r) {
+            _toast('Task deactivated — ' + (r.checklistRowsDeleted || 0) + ' checklist rows removed', 'ok');
+            _loadSetupTasks();
+          }, function(e) {
+            _toast('Error: ' + e.message, 'err');
+          });
+        },
+        '<i class="fas fa-trash"></i> Deactivate'
+      );
     }
 
     /* ══════════════════════════════════════════════════════════

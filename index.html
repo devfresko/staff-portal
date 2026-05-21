@@ -4767,20 +4767,7 @@
        MODAL SYSTEM
     ══════════════════════════════════════════════════════════ */
     var _modalCb = null;
-    // function _openModal(title, body, onOk, okLabel, isWide) {
-    //   document.getElementById('mTitle').innerHTML = title;
-    //   document.getElementById('mBody').innerHTML = body;
-    //   _modalCb = onOk || null;
-    //   var foot = '<button class="btn btn-outline" onclick="_closeModal()">Cancel</button>';
-    //   if (onOk) {
-    //     foot += '<button class="btn" id="mOkBtn" onclick="(_modalCb && _modalCb())">' +
-    //       (okLabel || 'Confirm') + '</button>';
-    //   }
-    //   document.getElementById('mFoot').innerHTML = foot;
-    //   var m = document.getElementById('modal');
-    //   m.className = 'modal-box on' + (isWide ? ' wide' : '');
-    //   document.getElementById('mOv').classList.add('on');
-    // }
+    
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape') {
         _closeModal();
@@ -9476,40 +9463,31 @@ function _loadSetupTasks() {
        MODAL SYSTEM — Generic modal with title, body, confirm, cancel
     ══════════════════════════════════════════════════════════════════════ */
     function _openModal(title, body, onConfirm, confirmLabel, noClose) {
-      var ov = document.getElementById('mOv');
-      var modal = document.getElementById('modal');
-      var tEl = document.getElementById('mTitle');
-      var bEl = document.getElementById('mBody');
-      var fEl = document.getElementById('mFoot');
-      if (!modal || !ov) return;
+  var ov    = document.getElementById('mOv');
+  var modal = document.getElementById('modal');
+  var tEl   = document.getElementById('mTitle');
+  var bEl   = document.getElementById('mBody');
+  var fEl   = document.getElementById('mFoot');
+  if (!modal || !ov) return;
 
-      if (tEl) tEl.innerHTML = title || 'Confirm';
-      if (bEl) bEl.innerHTML = body || '';
-      if (fEl) fEl.innerHTML =
-        '<button class="btn btn-outline" onclick="_closeModal()"><i class="fas fa-times"></i> Cancel</button>' +
-        (onConfirm ? '<button class="btn" id="mConfirmBtn">' + (confirmLabel || 'Confirm') + '</button>' : '');
+  if (tEl) tEl.innerHTML = title || 'Confirm';
+  if (bEl) bEl.innerHTML = body  || '';
+  if (fEl) fEl.innerHTML =
+    '<button class="btn btn-outline" onclick="_closeModal()"><i class="fas fa-times"></i> Cancel</button>' +
+    (onConfirm ? '<button class="btn" id="mConfirmBtn">' + (confirmLabel || 'Confirm') + '</button>' : '');
 
-      ov.style.display = 'block';
-      modal.style.display = 'block';
-      modal.classList.add('open');
+  ov.style.display    = 'block';
+  modal.style.display = 'block';
+  modal.classList.add('open');
 
-      if (onConfirm) {
   setTimeout(function() {
     var cb = document.getElementById('mConfirmBtn');
     if (cb) {
-      cb.onclick = onConfirm;  // ← function reference directly assign karo
+      if (onConfirm) cb.onclick = onConfirm; // ← closure se uid milega
       cb.focus();
     }
   }, 100);
 }
-
-        
-      // Focus confirm button
-      setTimeout(function () {
-        var cb = document.getElementById('mConfirmBtn');
-        if (cb) cb.focus();
-      }, 100);
-    }
     
     function _closeModal() {
       var ov = document.getElementById('mOv');

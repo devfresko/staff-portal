@@ -5818,7 +5818,7 @@ function _gasX(fn, args, timeout, onOk, onErr) {
 
 
 
-    // _markDone — see implementation below
+    // _markDone — actual implementation below at _markDone(taskUid, date)
 
     function _loadWeek() {
       var wk = document.getElementById('ckWeek') ? Number(document.getElementById('ckWeek').value) : _currentWeek();
@@ -5862,38 +5862,52 @@ function _gasX(fn, args, timeout, onOk, onErr) {
 
     function _loadHist() {
       var from = document.getElementById('histFrom') ? document.getElementById('histFrom').value : _daysAgo(30);
-      var to = document.getElementById('histTo') ? document.getElementById('histTo').value : _today();
-      var st = document.getElementById('histSt') ? document.getElementById('histSt').value : '';
+      var to   = document.getElementById('histTo')   ? document.getElementById('histTo').value   : _today();
+      var st   = document.getElementById('histSt')   ? document.getElementById('histSt').value   : '';
       var freq = document.getElementById('histFreq') ? document.getElementById('histFreq').value : '';
       var tblEl = document.getElementById('histTable');
       if (!tblEl) return;
       tblEl.innerHTML = _skel(3);
 
-      _gas('getTaskHistory', [_U.emp_code, from, to], function (logs) {
+      _gas('getTaskHistory', [_U.emp_code, from, to], function(logs) {
         _D.histLogs = logs;
-        var filtered = logs;
-        if (st) filtered = filtered.filter(function (l) { return l.status === st; });
-        if (freq) filtered = filtered.filter(function (l) { return l.frequency === freq; });
 
-        if (!filtered.length) { tblEl.innerHTML = '<div class="te"><i class="fas fa-search"></i>No records found matching your filters</div>'; return; }
+        // Status logic: actual_dt filled = Completed, blank = Pending
+        var filtered = logs.map(function(l) {
+          l.computed_status = (l.actual_dt && l.actual_dt !== '') ? 'Done' : 'Pending';
+          return l;
+        });
+
+        if (st === 'Done')    filtered = filtered.filter(function(l) { return l.computed_status === 'Done'; });
+        if (st === 'Pending') filtered = filtered.filter(function(l) { return l.computed_status === 'Pending'; });
+        if (freq) filtered = filtered.filter(function(l) { return l.frequency === freq; });
+
+        if (!filtered.length) {
+          tblEl.innerHTML = '<div class="te"><i class="fas fa-search"></i>No records found matching your filters</div>';
+          return;
+        }
 
         tblEl.innerHTML =
-          '<div class="export-bar"><i class="fas fa-table"></i><span>' + filtered.length + ' records</span>' +
+          '<div class="export-bar"><i class="fas fa-table"></i>' +
+          '<span>' + filtered.length + ' records</span>' +
           '<button class="btn btn-outline btn-xs" onclick="_exportHistory()"><i class="fas fa-download"></i> Export CSV</button>' +
           '</div>' +
           '<div class="table-card"><div class="tw"><table><thead><tr>' +
           '<th>Date</th><th>Task</th><th>Freq</th><th>Status</th><th>Completed On</th>' +
           '</tr></thead><tbody>' +
-          filtered.map(function (l) {
-            return '<tr>' +
+          filtered.map(function(l) {
+            var isDone = l.computed_status === 'Done';
+            return '<tr style="' + (isDone ? '' : 'opacity:.7') + '">' +
               '<td style="font-weight:700">' + _fmtDate(l.date) + '</td>' +
               '<td>' + _esc(l.task_name) + '</td>' +
               '<td>' + _freqBadge(l.frequency) + '</td>' +
-              '<td>' + _statusBadge(l.status) + '</td>' +
-              '<td style="color:var(--G);font-weight:600">' + (l.actual_dt ? _fmtDate(l.actual_dt) : '—') + '</td>' +
+              '<td>' + _statusBadge(isDone ? 'Done' : 'Pending') + '</td>' +
+              '<td style="color:var(--G);font-weight:600">' + (isDone ? _fmtDate(l.actual_dt) : '—') + '</td>' +
               '</tr>';
           }).join('') +
           '</tbody></table></div></div>';
+      }, function(e) {
+        tblEl.innerHTML = '<div class="te">Error: ' + _esc(e.message) + '</div>';
       });
     }
 
@@ -5944,24 +5958,48 @@ function _loadSetupTasks() {
       if (!seen[t.task_uid]) { seen[t.task_uid] = true; list.push(t); }
     });
     if (!list.length) {
-      el2.innerHTML = '<div class="te"><i class="fas fa-tasks"></i>No active tasks configured</div>';
+      el2.innerHTML = '<div class="empty-state"><i class="fas fa-tasks"></i><h4>No Active Tasks</h4><p>Add a task using the form on the left.</p></div>';
       return;
     }
+    // Group by department
+    var deptMap = {};
+    list.forEach(function(t) {
+      var d = t.dept || 'Other';
+      if (!deptMap[d]) deptMap[d] = [];
+      deptMap[d].push(t);
+    });
+    var freqColors = { D:'var(--P)', W:'var(--V)', F:'var(--V)', M:'var(--O)', Q:'var(--O)', H:'var(--R)', Y:'var(--R)' };
     el2.innerHTML =
-      '<div style="font-size:12px;font-weight:700;color:var(--tx2);margin-bottom:10px">' +
-      list.length + ' active tasks configured</div>' +
-      '<div style="display:flex;flex-direction:column;gap:6px">' +
-      list.map(function(t) {
-        return '<div style="background:var(--bg);border:1px solid var(--bdr);border-radius:9px;padding:9px 12px;display:flex;align-items:center;gap:10px">' +
-          '<div style="flex:1;min-width:0">' +
-          '<div style="font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _esc(t.task_name) + '</div>' +
-          '<div style="font-size:10.5px;color:var(--tx2);margin-top:2px;display:flex;align-items:center;gap:8px">' +
-          '<span>' + _esc(t.emp_name) + '</span><span>·</span><span>' + _esc(t.dept) + '</span>' +
-          _freqBadge(t.frequency) +
-          '</div></div>' +
-          '<button class="btn btn-red btn-xs" onclick="_deactivateTask(\'' + _esc(t.task_uid) + '\')" title="Deactivate"><i class="fas fa-times"></i></button>' +
-'</div>';
-      }).join('') + '</div>';
+      '<div style="font-size:11px;font-weight:700;color:var(--tx2);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center">' +
+      '<span><i class="fas fa-layer-group"></i> ' + list.length + ' active tasks across ' + Object.keys(deptMap).length + ' departments</span>' +
+      '</div>' +
+      Object.keys(deptMap).sort().map(function(dept) {
+        return '<div style="margin-bottom:12px">' +
+          '<div style="font-size:10px;font-weight:800;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;padding:4px 0 6px;border-bottom:1px solid var(--bdr);margin-bottom:6px">' +
+          '<i class="fas fa-building" style="margin-right:4px"></i>' + _esc(dept) + ' <span style="color:var(--tx3)">(' + deptMap[dept].length + ')</span>' +
+          '</div>' +
+          deptMap[dept].map(function(t) {
+            var fc = freqColors[t.frequency] || 'var(--tx2)';
+            return '<div style="background:var(--bg);border:1px solid var(--bdr);border-radius:8px;padding:8px 12px;display:flex;align-items:center;gap:10px;margin-bottom:5px;transition:all .15s" ' +
+              'onmouseover="this.style.borderColor=\'var(--P)\'" onmouseout="this.style.borderColor=\'var(--bdr)\'">' +
+              '<div style="width:6px;height:36px;border-radius:3px;background:' + fc + ';flex-shrink:0"></div>' +
+              '<div style="flex:1;min-width:0">' +
+              '<div style="font-size:12.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _esc(t.task_name) + '</div>' +
+              '<div style="font-size:10.5px;color:var(--tx2);margin-top:2px;display:flex;align-items:center;gap:6px">' +
+              '<i class="fas fa-user" style="font-size:9px"></i><span>' + _esc(t.emp_name) + '</span>' +
+              '<span style="color:var(--tx3)">·</span>' +
+              _freqBadge(t.frequency) +
+              '</div>' +
+              '</div>' +
+              '<button class="btn btn-red btn-xs" onclick="_deactivateTask(\'' + _esc(t.task_uid) + '\')" title="Deactivate task">' +
+              '<i class="fas fa-trash-alt"></i></button>' +
+              '</div>';
+          }).join('') +
+          '</div>';
+      }).join('');
+  }, function(e) {
+    var el2 = document.getElementById('setupTaskList');
+    if (el2) el2.innerHTML = '<div class="te">Error loading tasks: ' + _esc(e.message) + '</div>';
   });
 }
 
@@ -6225,63 +6263,89 @@ function _loadSetupTasks() {
         el.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i><h4>No Delegation Tasks</h4><p>Nothing to display here right now.</p></div>';
         return;
       }
-      var done = dels.filter(function(d) { return d.status === 'Completed'; }).length;
-      var ovr  = dels.filter(function(d) { return d.is_overdue && d.status !== 'Completed'; }).length;
-      var pend = dels.filter(function(d) { return d.status !== 'Completed' && d.status !== 'Cancelled'; }).length;
 
-      // Expand/Collapse all buttons
+      // Group: Overdue → Pending → Shifted → Cancelled → Completed
+      var groups = [
+        { key: 'overdue',   label: 'Overdue',   icon: 'fa-triangle-exclamation', color: 'var(--R)',  items: [] },
+        { key: 'pending',   label: 'Pending',   icon: 'fa-hourglass-half',       color: 'var(--O)',  items: [] },
+        { key: 'shifted',   label: 'Shifted',   icon: 'fa-calendar-days',        color: 'var(--V)',  items: [] },
+        { key: 'cancelled', label: 'Cancelled', icon: 'fa-ban',                  color: 'var(--tx3)',items: [] },
+        { key: 'completed', label: 'Completed', icon: 'fa-check-circle',         color: 'var(--G)',  items: [] }
+      ];
+      dels.forEach(function(d) {
+        if (d.status === 'Completed')        groups[4].items.push(d);
+        else if (d.status === 'Cancelled')   groups[3].items.push(d);
+        else if (d.status === 'Shifted')     groups[2].items.push(d);
+        else if (d.is_overdue)               groups[0].items.push(d);
+        else                                 groups[1].items.push(d);
+      });
+
+      var done = groups[4].items.length;
+      var ovr  = groups[0].items.length;
+      var pend = groups[1].items.length + groups[2].items.length;
+
       el.innerHTML =
-        '<div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:center">' +
+        // Summary chips + expand/collapse
+        '<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">' +
         '<div class="chip"><i class="fas fa-list"></i> Total: ' + dels.length + '</div>' +
         '<div class="chip" style="background:var(--Gl);color:var(--G)"><i class="fas fa-check-circle"></i> Done: ' + done + '</div>' +
-        '<div class="chip" style="background:var(--Ol);color:var(--O)"><i class="fas fa-hourglass"></i> Pending: ' + pend + '</div>' +
+        '<div class="chip" style="background:var(--Ol);color:var(--O)"><i class="fas fa-hourglass"></i> Active: ' + pend + '</div>' +
         (ovr > 0 ? '<div class="chip" style="background:var(--Rl);color:var(--R)"><i class="fas fa-triangle-exclamation"></i> Overdue: ' + ovr + '</div>' : '') +
         '<div style="flex:1"></div>' +
         '<button class="btn btn-xs btn-outline" onclick="_delegExpandAll(true)"><i class="fas fa-expand-alt"></i> Expand All</button>' +
         '<button class="btn btn-xs btn-outline" onclick="_delegExpandAll(false)"><i class="fas fa-compress-alt"></i> Collapse All</button>' +
         '</div>' +
-        '<div class="dcards" id="dcardsList">' +
-        dels.map(function(d, idx) {
-          var effStatus = d.is_overdue && d.status !== 'Completed' ? 'Overdue' : d.status;
-          var cls = d.status === 'Completed' ? 'done' : d.is_overdue ? 'overdue' : d.status === 'Shifted' ? 'shifted' : d.status === 'Cancelled' ? 'cancelled' : '';
-          var dl  = _dl(d.final_date);
-          var dlTxt = dl === null ? '' :
-            dl < 0  ? '<span style="color:var(--R);font-weight:800"><i class="fas fa-triangle-exclamation"></i> Overdue by ' + Math.abs(dl) + 'd</span>' :
-            dl === 0 ? '<span style="color:var(--O);font-weight:800"><i class="fas fa-clock"></i> Due Today</span>' :
-                       '<span style="color:var(--tx3)"><i class="fas fa-calendar"></i> Due in ' + dl + 'd</span>';
-          var cardId = 'dcard_' + idx;
-          return '<div class="dcard ' + cls + '" id="' + cardId + '">' +
-            // Header — always visible, click to toggle
-            '<div class="dc-top" style="cursor:pointer" onclick="_delegToggle(\'' + cardId + '\')">' +
-            '<div class="dc-desc">' + _esc(d.task_desc) + '</div>' +
-            '<div style="display:flex;align-items:center;gap:8px">' +
-            _statusBadge(effStatus) +
-            '<i class="fas fa-chevron-down dc-chev" style="font-size:11px;color:var(--tx3);transition:transform .2s"></i>' +
+        // Grouped sections
+        groups.filter(function(g) { return g.items.length > 0; }).map(function(g) {
+          return '<div style="margin-bottom:16px">' +
+            // Group header
+            '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--sur2);border-radius:8px;margin-bottom:8px;cursor:pointer" ' +
+            'onclick="var s=this.nextSibling;s.style.display=s.style.display===\'none\'?\'\':\'none\'">' +
+            '<i class="fas ' + g.icon + '" style="color:' + g.color + ';font-size:12px"></i>' +
+            '<span style="font-size:12px;font-weight:700;color:' + g.color + '">' + g.label + '</span>' +
+            '<span style="font-size:11px;color:var(--tx3);margin-left:4px">(' + g.items.length + ')</span>' +
+            '<i class="fas fa-chevron-down" style="margin-left:auto;font-size:10px;color:var(--tx3)"></i>' +
             '</div>' +
-            '</div>' +
-            // Collapsible body
-            '<div class="dc-body">' +
-            '<div class="dc-meta">' +
-            (isOut ?
-              '<span><i class="fas fa-user-check"></i> To: <strong>' + _esc(d.delegated_to_name) + '</strong></span>' :
-              '<span><i class="fas fa-user"></i> By: <strong>' + _esc(d.delegated_by_name) + '</strong></span>') +
-            '<span><i class="fas fa-calendar-plus"></i> ' + _fmtDate(d.first_date) + '</span>' +
-            '<span><i class="fas fa-flag-checkered"></i> ' + _fmtDate(d.final_date) + '</span>' +
-            (d.status !== 'Completed' ? '<span>' + dlTxt + '</span>' : '') +
-            (d.revision_1 ? '<span style="color:var(--V)"><i class="fas fa-calendar-days"></i> Rev1: ' + _fmtDate(d.revision_1) + '</span>' : '') +
-            (d.revision_2 ? '<span style="color:var(--V)"><i class="fas fa-calendar-days"></i> Rev2: ' + _fmtDate(d.revision_2) + '</span>' : '') +
-            '</div>' +
-            '<div class="dc-act">' +
-            (!isOut && d.status !== 'Completed' && d.status !== 'Cancelled' ?
-              '<button class="btn btn-green btn-sm" data-tid="' + _esc(d.task_id) + '" onclick="_dComplete(this)"><i class="fas fa-check"></i> Mark Complete</button>' +
-              '<button class="btn btn-outline btn-sm" data-tid="' + _esc(d.task_id) + '" onclick="_dShift(this)"><i class="fas fa-calendar-days"></i> Request Shift</button>' : '') +
-            (isOut && d.status !== 'Completed' && d.status !== 'Cancelled' ?
-              '<button class="btn btn-outline btn-sm" data-tid="' + _esc(d.task_id) + '" onclick="_dCancel(this)"><i class="fas fa-times"></i> Cancel</button>' : '') +
-            '</div>' +
-            '</div>' +
-            '</div>';
-        }).join('') +
-        '</div>';
+            '<div class="dcards">' +
+            g.items.map(function(d, idx) {
+              var effStatus = d.is_overdue && d.status !== 'Completed' ? 'Overdue' : d.status;
+              var cardId = 'dcard_' + g.key + '_' + idx;
+              var dl = _dl(d.final_date);
+              var dlTxt = dl === null ? '' :
+                dl < 0  ? '<span style="color:var(--R);font-weight:800"><i class="fas fa-triangle-exclamation"></i> Overdue by ' + Math.abs(dl) + 'd</span>' :
+                dl === 0 ? '<span style="color:var(--O);font-weight:800"><i class="fas fa-clock"></i> Due Today</span>' :
+                           '<span style="color:var(--tx3)"><i class="fas fa-calendar"></i> Due in ' + dl + 'd</span>';
+              return '<div class="dcard ' + g.key + '" id="' + cardId + '">' +
+                '<div class="dc-top" style="cursor:pointer" onclick="_delegToggle(\'' + cardId + '\')">' +
+                '<div class="dc-desc">' + _esc(d.task_desc) + '</div>' +
+                '<div style="display:flex;align-items:center;gap:8px">' +
+                _statusBadge(effStatus) +
+                '<i class="fas fa-chevron-down dc-chev" style="font-size:11px;color:var(--tx3);transition:transform .2s"></i>' +
+                '</div>' +
+                '</div>' +
+                '<div class="dc-body" style="display:none">' +
+                '<div class="dc-meta">' +
+                (isOut ?
+                  '<span><i class="fas fa-user-check"></i> To: <strong>' + _esc(d.delegated_to_name) + '</strong></span>' :
+                  '<span><i class="fas fa-user"></i> By: <strong>' + _esc(d.delegated_by_name) + '</strong></span>') +
+                '<span><i class="fas fa-calendar-plus"></i> ' + _fmtDate(d.first_date) + '</span>' +
+                '<span><i class="fas fa-flag-checkered"></i> ' + _fmtDate(d.final_date) + '</span>' +
+                (d.status !== 'Completed' ? '<span>' + dlTxt + '</span>' : '') +
+                (d.revision_1 ? '<span style="color:var(--V)"><i class="fas fa-calendar-days"></i> Rev1: ' + _fmtDate(d.revision_1) + '</span>' : '') +
+                (d.revision_2 ? '<span style="color:var(--V)"><i class="fas fa-calendar-days"></i> Rev2: ' + _fmtDate(d.revision_2) + '</span>' : '') +
+                '</div>' +
+                '<div class="dc-act">' +
+                (!isOut && d.status !== 'Completed' && d.status !== 'Cancelled' ?
+                  '<button class="btn btn-green btn-sm" data-tid="' + _esc(d.task_id) + '" onclick="_dComplete(this)"><i class="fas fa-check"></i> Mark Complete</button>' +
+                  '<button class="btn btn-outline btn-sm" data-tid="' + _esc(d.task_id) + '" onclick="_dShift(this)"><i class="fas fa-calendar-days"></i> Request Shift</button>' : '') +
+                (isOut && d.status !== 'Completed' && d.status !== 'Cancelled' ?
+                  '<button class="btn btn-outline btn-sm" data-tid="' + _esc(d.task_id) + '" onclick="_dCancel(this)"><i class="fas fa-times"></i> Cancel</button>' : '') +
+                '</div>' +
+                '</div>' +
+                '</div>';
+            }).join('') +
+            '</div></div>';
+        }).join('');
     }
 
     function _delegToggle(cardId) {
@@ -9683,33 +9747,27 @@ function _loadSetupTasks() {
     }
 
     function _markDone(taskUid, date) {
-      // Sab matching buttons disable karo
-      var allBtns = document.querySelectorAll('button[onclick*="_markDone"]');
-      var myBtn = null;
-      allBtns.forEach(function(b) {
+      // Done button loading state
+      document.querySelectorAll('button[onclick*="_markDone"]').forEach(function(b) {
         if (b.getAttribute('onclick').indexOf(taskUid) > -1) {
-          myBtn = b;
           b.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>';
           b.disabled = true;
         }
       });
-      // Circle indicator bhi update karo
-      var circles = document.querySelectorAll('[onclick*="_markDone"][onclick*="' + taskUid + '"]');
-      _gasX('markTaskDone', [taskUid, date, ''], 20000, function() {
+      _gas('markTaskDone', [taskUid, date, ''], function() {
         _toast('✓ Task marked as done!', 'ok');
         _addNtf('Task completed!', 'fa-check-circle', 'var(--Gl)', 'var(--G)');
         _loadToday();
       }, function(e) {
         _toast('Error: ' + e.message, 'err');
-        if (myBtn) { myBtn.innerHTML = '<i class="fas fa-check"></i> Done'; myBtn.disabled = false; }
+        _loadToday(); // refresh to restore button state
       });
     }
 
-    // _loadWeek and _loadHist — actual implementations at lines 5837 and 5877
-    function _loadDelMine()   { /* delegation mine — loaded by _vDeleg */ }
-    function _loadDelOut()    { /* delegation out — loaded by _vDeleg */ }
-    function _loadDelAll()    { /* delegation all — loaded by _vDeleg */ }
-    function _loadDelCreate() { /* delegation create — loaded by _vDeleg */ }
+    function _loadDelMine()   { _loadDMine && _loadDMine(); }
+    function _loadDelOut()    { _loadDOut  && _loadDOut();  }
+    function _loadDelAll()    { _loadDAll  && _loadDAll();  }
+    function _loadDelCreate() { /* dcr form is static */ }
     function _loadLeaveReq() { _loadMyLeaveReqs(); }
     function _loadLeaveSumm() { _loadLeave(); }
     function _loadLeaveReq() { _loadMyLeaves(); }

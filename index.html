@@ -5818,7 +5818,7 @@ function _gasX(fn, args, timeout, onOk, onErr) {
 
 
 
-    // _markDone handled below at line 9699 — do not duplicate
+    // _markDone — see implementation below
 
     function _loadWeek() {
       var wk = document.getElementById('ckWeek') ? Number(document.getElementById('ckWeek').value) : _currentWeek();
@@ -9683,26 +9683,33 @@ function _loadSetupTasks() {
     }
 
     function _markDone(taskUid, date) {
-      // Button ko loading state mein daalo
-      var btns = document.querySelectorAll('[onclick*="' + taskUid + '"]');
-      btns.forEach(function(b) {
-        b.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>';
-        b.disabled = true;
+      // Sab matching buttons disable karo
+      var allBtns = document.querySelectorAll('button[onclick*="_markDone"]');
+      var myBtn = null;
+      allBtns.forEach(function(b) {
+        if (b.getAttribute('onclick').indexOf(taskUid) > -1) {
+          myBtn = b;
+          b.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i>';
+          b.disabled = true;
+        }
       });
-      _gas('markTaskDone', [taskUid, date, ''], function() {
+      // Circle indicator bhi update karo
+      var circles = document.querySelectorAll('[onclick*="_markDone"][onclick*="' + taskUid + '"]');
+      _gasX('markTaskDone', [taskUid, date, ''], 20000, function() {
         _toast('✓ Task marked as done!', 'ok');
         _addNtf('Task completed!', 'fa-check-circle', 'var(--Gl)', 'var(--G)');
         _loadToday();
       }, function(e) {
         _toast('Error: ' + e.message, 'err');
-        btns.forEach(function(b) {
-          b.innerHTML = '<i class="fas fa-check"></i> Done';
-          b.disabled = false;
-        });
+        if (myBtn) { myBtn.innerHTML = '<i class="fas fa-check"></i> Done'; myBtn.disabled = false; }
       });
     }
 
-    // stubs removed — actual implementations above handle these
+    // _loadWeek and _loadHist — actual implementations at lines 5837 and 5877
+    function _loadDelMine()   { /* delegation mine — loaded by _vDeleg */ }
+    function _loadDelOut()    { /* delegation out — loaded by _vDeleg */ }
+    function _loadDelAll()    { /* delegation all — loaded by _vDeleg */ }
+    function _loadDelCreate() { /* delegation create — loaded by _vDeleg */ }
     function _loadLeaveReq() { _loadMyLeaveReqs(); }
     function _loadLeaveSumm() { _loadLeave(); }
     function _loadLeaveReq() { _loadMyLeaves(); }

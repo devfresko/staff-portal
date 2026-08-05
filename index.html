@@ -7231,6 +7231,9 @@
           <div class="nv" id="nv-attana" onclick="_loadV('attana')">
             <i class="fas fa-user-clock"></i> Attendance Analytics
           </div>
+          <div class="nv" id="nv-payroll" onclick="_loadV('payroll')">
+            <i class="fas fa-indian-rupee-sign"></i> Payroll
+          </div>
         </div>
 
         <hr class="nv-sep">
@@ -8093,7 +8096,7 @@
        JSONP was failing: /exec redirects to echo endpoint (302)
        fetch POST works correctly with GAS doPost
     ══════════════════════════════════════════════════════════ */
-    var GAS_URL = 'https://script.google.com/macros/s/AKfycbyQytTFbxMBFsMJgvYqT-6VhffHXBDwrCZhw-VpA_YDmpD9ohWFq8FlEdyF5WyjtUyoSQ/exec';
+    var GAS_URL = 'https://script.google.com/macros/s/AKfycbwB4zqgE5ZFFRMFeo-WMp45QstbHb6CHAs8aMmxsw6gZzFbsrZBQ2XwvMsxgGT0Ticf/exec';
     var _TOKEN  = '';
 
     var _gasActive = 0; // count of concurrent GAS calls in flight
@@ -8277,7 +8280,8 @@ function _gasX(fn, args, timeout, onOk, onErr) {
       { title: 'Checklist Analytics', route: 'clana', ico: 'fa-list-check', meta: 'Task completion, frequency breakdown, top performers', cat: 'Manager', mgr: true },
       { title: 'Delegation Analytics', route: 'delana', ico: 'fa-diagram-project', meta: 'Delegation stats', cat: 'Manager', mgr: true },
       { title: 'Attendance Analytics', route: 'attana', ico: 'fa-user-clock', meta: 'Attendance reporting', cat: 'Manager', mgr: true },
-      { title: 'Muster Report', route: 'muster', ico: 'fa-id-card-clip', meta: 'Monthly attendance muster', cat: 'Manager', mgr: true }
+      { title: 'Muster Report', route: 'muster', ico: 'fa-id-card-clip', meta: 'Monthly attendance muster', cat: 'Manager', mgr: true },
+      { title: 'Payroll', route: 'payroll', ico: 'fa-indian-rupee-sign', meta: 'Salary, deductions & payment management', cat: 'Manager', mgr: true }
     ];
     function _openGS() {
       var ov = document.getElementById('gsOv');
@@ -8653,7 +8657,8 @@ function _gasX(fn, args, timeout, onOk, onErr) {
         clana:  _vClAna,
         delana: _vDelAna,
         attana: _vAttAna,
-        muster: _vMuster
+        muster: _vMuster,
+        payroll: _vPayroll
       };
 
       // IMPORTANT: ensure content is always visible
@@ -17160,28 +17165,45 @@ function _loadSetupTasks() {
       var taskName    = row.dataset.name    || '';
       var taskPlanned = row.dataset.planned || '';
       var date        = row.dataset.dt      || '';
-      var circle = row.querySelector('.ck-circle');
-      var btn    = row.querySelector('.ck-btn');
-      if (circle) circle.style.pointerEvents = 'none';
-      if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Saving…'; }
-      row.style.opacity = '0.6';
 
-      _gas('markTaskDone', [rowNum, occ, taskUid, taskName, taskPlanned, date, ''], function(r) {
-        row.style.opacity = '1';
-        if (r && r.success === false) {
-          _toast('❌ ' + (r.error || 'Task update nahi hui'), 'err');
-          if (circle) circle.style.pointerEvents = '';
-          if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Done'; }
-        } else {
-          _toast('✅ Done!', 'ok');
-          _loadToday();
-        }
-      }, function(e) {
-        row.style.opacity = '1';
-        _toast('❌ Error: ' + e.message, 'err');
-        if (circle) circle.style.pointerEvents = '';
-        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Done'; }
-      });
+      // Show optional remark modal before saving Done
+      _openModal(
+        '<i class="fas fa-check-circle" style="color:var(--G)"></i> Mark as Done',
+        '<div style="font-size:14px;font-weight:700;margin-bottom:12px;word-break:break-word">' + _esc(taskName) + '</div>' +
+        '<div style="font-size:12px;color:var(--tx3);margin-bottom:10px">Task is done? Optionally add a completion remark.</div>' +
+        '<label style="font-size:11px;font-weight:800;color:var(--tx2);text-transform:uppercase;letter-spacing:.4px;display:block;margin-bottom:6px">Remark <span style="font-weight:400;text-transform:none">(optional)</span></label>' +
+        '<textarea id="doneRemarkEl" rows="3" placeholder="e.g. Completed — stock counted, 3 items found short" style="width:100%;padding:9px 12px;border:1.5px solid var(--bdr);border-radius:8px;font-size:13px;background:var(--bg);color:var(--tx);outline:none;resize:vertical;font-family:inherit"></textarea>',
+        function() {
+          var remark = ((document.getElementById('doneRemarkEl') || {}).value || '').trim();
+          _closeModal();
+          var circle = row.querySelector('.ck-circle');
+          var btn    = row.querySelector('.ck-btn');
+          if (circle) circle.style.pointerEvents = 'none';
+          if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> Saving…'; }
+          row.style.opacity = '0.6';
+          _gas('markTaskDone', [rowNum, occ, taskUid, taskName, taskPlanned, date, remark], function(r) {
+            row.style.opacity = '1';
+            if (r && r.success === false) {
+              _toast('❌ ' + (r.error || 'Task update nahi hui'), 'err');
+              if (circle) circle.style.pointerEvents = '';
+              if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Done'; }
+            } else {
+              _toast('✅ Done!', 'ok');
+              _loadToday();
+            }
+          }, function(e) {
+            row.style.opacity = '1';
+            _toast('❌ Error: ' + e.message, 'err');
+            if (circle) circle.style.pointerEvents = '';
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Done'; }
+          });
+        },
+        '<i class="fas fa-check"></i> Mark Done'
+      );
+      // Auto-focus remark field
+      setTimeout(function() {
+        var el = document.getElementById('doneRemarkEl'); if (el) el.focus();
+      }, 180);
     }
 
     function _loadDelMine()   { if(typeof _loadDMine==='function') _loadDMine(); }
@@ -17248,7 +17270,7 @@ function _loadSetupTasks() {
       var tabs = [
         { id: 'emsumm', lbl: '<i class="fas fa-table-cells-large"></i> Summary' },
         { id: 'emcl',   lbl: '<i class="fas fa-list-check"></i> Checklist' },
-        { id: 'emdl',   lbl: '<i class="fas fa-diagram-project"></i> Delegation' },
+        { id: 'emdl',   lbl: '<i class="fas fa-diagram-project"></i> Delegation <span style="font-size:9px;opacity:.7;font-weight:600">(Due/Shifted)</span>' },
         { id: 'emat',   lbl: '<i class="fas fa-user-clock"></i> Attendance' },
         { id: 'emwm',   lbl: '<i class="fas fa-handshake"></i> Weekly Meeting' },
         { id: 'emap',   lbl: '<i class="fas fa-medal"></i> Increment Appraisal' }
@@ -17879,6 +17901,13 @@ function _loadSetupTasks() {
         '<option value="Partial">🔶 Partial</option>' +
         '<option value="Not Met">❌ Not Met</option>' +
         '</select>' +
+        '</div>' +
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:center">' +
+        '<div style="display:flex;align-items:center;gap:6px"><label style="font-size:11px;font-weight:700;color:var(--tx3);white-space:nowrap">From</label>' +
+        '<input type="date" id="wmHistFrom" class="ana-sel" onchange="_wmLoadHistory()" style="min-width:130px"></div>' +
+        '<div style="display:flex;align-items:center;gap:6px"><label style="font-size:11px;font-weight:700;color:var(--tx3);white-space:nowrap">To</label>' +
+        '<input type="date" id="wmHistTo" class="ana-sel" onchange="_wmLoadHistory()" style="min-width:130px"></div>' +
+        '<button class="btn btn-sm" onclick="_wmClearFilters()"><i class="fas fa-filter-circle-xmark"></i> Clear</button>' +
         '<button class="btn btn-sm" onclick="_wmLoadHistory()"><i class="fas fa-rotate-right"></i></button>' +
         '</div>' +
         '<div id="wmHistList">' + _skel(3, 'sk-h5') + '</div>' +
@@ -18003,7 +18032,9 @@ function _loadSetupTasks() {
       var filters = {
         emp_id: (document.getElementById('wmHistEmp')    || {}).value || 'all',
         dept:   (document.getElementById('wmHistDept')   || {}).value || 'all',
-        status: (document.getElementById('wmHistStatus') || {}).value || 'all'
+        status: (document.getElementById('wmHistStatus') || {}).value || 'all',
+        from:   (document.getElementById('wmHistFrom')   || {}).value || '',
+        to:     (document.getElementById('wmHistTo')     || {}).value || ''
       };
 
       _gas('getWeeklyCommitments', [filters], function (rows) {
@@ -18110,6 +18141,16 @@ function _loadSetupTasks() {
         _toast('✓ Status updated', 'ok');
         _wmLoadHistory();
       }, function (e) { _toast('Error: ' + e.message, 'err'); });
+    }
+
+    function _wmClearFilters() {
+      ['wmHistEmp','wmHistDept','wmHistStatus'].forEach(function(id) {
+        var el = document.getElementById(id); if (el) el.value = el.options[0].value;
+      });
+      ['wmHistFrom','wmHistTo'].forEach(function(id) {
+        var el = document.getElementById(id); if (el) el.value = '';
+      });
+      _wmLoadHistory();
     }
 
     /* ══════════════════════════════════════════════════════════════════════
@@ -18402,6 +18443,378 @@ function _loadSetupTasks() {
       });
       _downloadCSV('em_dashboard_' + (data.from || _currMonth()) + '_to_' + (data.to || _today()) + '.csv', rows);
       _toast('Exported!', 'ok');
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════
+       PAYROLL MODULE — Management only (OWNER / MANAGER)
+       Monthly salary records: Earnings + Deductions + Net Pay
+       OWNER can mark as Paid. Payroll tab visible only to managers.
+    ══════════════════════════════════════════════════════════════════════ */
+    function _vPayroll() {
+      if (!_isManager()) {
+        document.getElementById('content').innerHTML =
+          '<div class="empty-state"><i class="fas fa-lock"></i>' +
+          '<h4>Access Restricted</h4><p>Manager or Owner access is required to view Payroll.</p></div>';
+        return;
+      }
+
+      // Build month options: last 12 months
+      function _monthOpts(selId) {
+        var opts = '<option value="all">All Months</option>';
+        var now = new Date();
+        for (var i = 0; i < 12; i++) {
+          var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+          var y = d.getFullYear(), m = d.getMonth() + 1;
+          var val = y + '-' + (m < 10 ? '0' : '') + m;
+          var lbl = d.toLocaleString('en-IN', { month: 'long', year: 'numeric' });
+          opts += '<option value="' + val + '"' + (i === 0 ? ' selected' : '') + '>' + lbl + '</option>';
+        }
+        return opts;
+      }
+
+      document.getElementById('content').innerHTML =
+        '<div class="mod-head">' +
+        '<div><div class="mod-title"><i class="fas fa-indian-rupee-sign" style="color:var(--G)"></i> Payroll</div>' +
+        '<div class="mod-sub">Monthly salary, deductions & payment records</div></div>' +
+        '<button class="btn btn-sm" onclick="_prAddRecord()"><i class="fas fa-plus"></i> Add Record</button>' +
+        '</div>' +
+
+        // Filters
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;padding:10px 14px;background:var(--sur2);border-radius:12px;border:1px solid var(--bdr)">' +
+        '<select id="prMonth" class="ana-sel" onchange="_prLoad()" style="min-width:150px">' + _monthOpts('prMonth') + '</select>' +
+        '<select id="prEmp" class="ana-sel" onchange="_prLoad()">' +
+        '<option value="all">All Employees</option>' + _getEmpOptions() + '</select>' +
+        '<select id="prDept" class="ana-sel" onchange="_prLoad()">' +
+        '<option value="all">All Departments</option>' + _getDeptOptions() + '</select>' +
+        '<select id="prStatus" class="ana-sel" onchange="_prLoad()">' +
+        '<option value="all">All Status</option>' +
+        '<option value="Pending">⏳ Pending</option>' +
+        '<option value="Paid">✅ Paid</option>' +
+        '<option value="On Hold">🔶 On Hold</option>' +
+        '</select>' +
+        '<div style="flex:1"></div>' +
+        '<button class="btn btn-sm btn-outline" onclick="_prExport()"><i class="fas fa-download"></i> Export CSV</button>' +
+        '<button class="btn btn-sm" onclick="_prLoad()"><i class="fas fa-rotate-right"></i></button>' +
+        '</div>' +
+
+        // Summary cards
+        '<div id="prSummary" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px"></div>' +
+
+        // Table
+        '<div id="prGrid">' + _skel(4) + '</div>';
+
+      _prLoad();
+    }
+
+    function _prLoad() {
+      var el = document.getElementById('prGrid');
+      if (!el) return;
+      el.innerHTML = _skel(4);
+      var filters = {
+        month:  (document.getElementById('prMonth')  || {}).value || 'all',
+        emp_id: (document.getElementById('prEmp')    || {}).value || 'all',
+        dept:   (document.getElementById('prDept')   || {}).value || 'all',
+        status: (document.getElementById('prStatus') || {}).value || 'all'
+      };
+      _gas('getPayroll', [filters], function(data) {
+        _prRender(data);
+      }, function(e) {
+        if (el) el.innerHTML = '<div class="te"><i class="fas fa-exclamation-triangle"></i> ' + _esc(e.message) +
+          '<br><br><div style="font-size:12px;color:var(--tx3)">Note: Run <code>setupPayrollTab()</code> in Apps Script editor to create the Payroll sheet first.</div></div>';
+      });
+    }
+
+    function _prRender(data) {
+      var el = document.getElementById('prGrid');
+      var sumEl = document.getElementById('prSummary');
+      if (!el) return;
+
+      var records = data.records || [];
+      var s = data.summary || {};
+
+      // Summary strip
+      if (sumEl) {
+        var sumCards = [
+          { lbl: 'Total Records', val: s.total_records || 0, c: 'var(--P)', ico: 'fa-file-invoice-dollar' },
+          { lbl: 'Gross Salary', val: '₹' + _prFmt(s.total_gross || 0), c: 'var(--V)', ico: 'fa-arrow-up-wide-short' },
+          { lbl: 'Deductions', val: '₹' + _prFmt(s.total_deductions || 0), c: 'var(--R)', ico: 'fa-arrow-down-wide-short' },
+          { lbl: 'Net Salary', val: '₹' + _prFmt(s.total_net || 0), c: 'var(--G)', ico: 'fa-wallet' },
+          { lbl: 'Paid', val: s.paid_count || 0, c: 'var(--G)', ico: 'fa-circle-check' },
+          { lbl: 'Pending', val: s.pending_count || 0, c: 'var(--O)', ico: 'fa-clock' }
+        ];
+        sumEl.innerHTML = sumCards.map(function(c) {
+          return '<div class="card card-nohover" style="padding:12px;text-align:center">' +
+            '<div style="font-size:18px;color:' + c.c + ';margin-bottom:4px"><i class="fas ' + c.ico + '"></i></div>' +
+            '<div style="font-size:13px;font-weight:900;color:' + c.c + '">' + c.val + '</div>' +
+            '<div style="font-size:10px;color:var(--tx3);font-weight:700;text-transform:uppercase;margin-top:2px">' + c.lbl + '</div>' +
+            '</div>';
+        }).join('');
+      }
+
+      if (!records.length) {
+        el.innerHTML = '<div class="empty-state"><i class="fas fa-file-invoice-dollar"></i>' +
+          '<h4>No Payroll Records</h4><p>Add a payroll record using the button above. Make sure the Payroll sheet is set up in your Google Sheet.</p></div>';
+        return;
+      }
+
+      el.innerHTML = '<div class="table-card"><div class="tw"><table><thead><tr>' +
+        '<th>#</th><th>Employee</th><th>Month</th><th>Gross</th><th>Deductions</th>' +
+        '<th style="font-weight:800">Net Pay</th><th>Mode</th><th>Status</th><th>Actions</th>' +
+        '</tr></thead><tbody>' +
+        records.map(function(r, i) {
+          var sClr = r.status === 'Paid' ? 'var(--G)' : r.status === 'On Hold' ? 'var(--O)' : 'var(--O)';
+          var sBg  = r.status === 'Paid' ? 'var(--Gl)' : r.status === 'On Hold' ? 'var(--Ol)' : 'var(--Ol)';
+          var sIco = r.status === 'Paid' ? 'fa-circle-check' : 'fa-clock';
+          return '<tr>' +
+            '<td style="color:var(--tx3)">' + (i+1) + '</td>' +
+            '<td><div style="font-weight:700;font-size:13px">' + _esc(r.emp_name) + '</div>' +
+            '<div style="font-size:10px;color:var(--tx3)">' + _esc(r.dept) + ' · ' + _esc(r.emp_id) + '</div></td>' +
+            '<td style="font-size:12px;white-space:nowrap">' + _esc(r.month) + '</td>' +
+            '<td style="font-size:13px;color:var(--tx2)">₹' + _prFmt(r.gross_salary) + '</td>' +
+            '<td style="font-size:13px;color:var(--R)">₹' + _prFmt(r.total_deductions) + '</td>' +
+            '<td style="font-size:14px;font-weight:800;color:var(--G)">₹' + _prFmt(r.net_salary) + '</td>' +
+            '<td style="font-size:11px;color:var(--tx3)">' + _esc(r.payment_mode || '—') + '</td>' +
+            '<td><span style="padding:3px 8px;border-radius:6px;font-size:10px;font-weight:800;background:' + sBg + ';color:' + sClr + ';white-space:nowrap">' +
+            '<i class="fas ' + sIco + '"></i> ' + _esc(r.status) + '</span></td>' +
+            '<td><div style="display:flex;gap:4px;flex-wrap:nowrap">' +
+            '<button class="btn btn-xs btn-outline" onclick="_prDetail(\'' + _esc(r.payroll_id) + '\',\'' + _esc(r.emp_name) + '\',\'' + _esc(r.month) + '\')" title="View breakdown"><i class="fas fa-eye"></i></button>' +
+            (r.status === 'Pending' && _isOwner() ? '<button class="btn btn-xs" style="background:var(--Gl);color:var(--G)" onclick="_prMarkPaid(\'' + _esc(r.payroll_id) + '\',\'' + _esc(r.emp_name) + '\')" title="Mark as Paid"><i class="fas fa-check"></i> Paid</button>' : '') +
+            '</div></td>' +
+            '</tr>';
+        }).join('') + '</tbody></table></div></div>';
+    }
+
+    function _prFmt(n) {
+      return Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+    }
+
+    function _isOwner() {
+      var u = _D && _D.user;
+      return u && (String(u.role || '').toUpperCase() === 'OWNER');
+    }
+
+    function _prDetail(payrollId, empName, month) {
+      // Find the record in current data and show breakdown modal
+      _gas('getPayroll', [{ month: 'all', emp_id: 'all', dept: 'all', status: 'all' }], function(data) {
+        var r = null;
+        (data.records || []).forEach(function(rec) { if (rec.payroll_id === payrollId) r = rec; });
+        if (!r) { _toast('Record not found', 'err'); return; }
+        function row(lbl, val, clr) {
+          return '<tr><td style="padding:8px 10px;color:var(--tx2);font-size:13px">' + lbl + '</td>' +
+            '<td style="padding:8px 10px;font-weight:700;font-size:13px;text-align:right;color:' + (clr||'var(--tx)') + '">₹' + _prFmt(val) + '</td></tr>';
+        }
+        var body =
+          '<div style="font-size:11px;color:var(--tx3);margin-bottom:12px">' + _esc(r.dept) + ' · ' + _esc(r.emp_id) + ' · ' + _esc(r.month) + '</div>' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">' +
+          '<div><div style="font-size:11px;font-weight:800;color:var(--G);text-transform:uppercase;margin-bottom:6px">Earnings</div>' +
+          '<table style="width:100%;border-collapse:collapse">' +
+          row('Basic Salary', r.basic_salary) +
+          row('HRA', r.hra) +
+          row('Conveyance', r.conveyance) +
+          row('Other Allowances', r.other_allowances) +
+          '<tr style="border-top:2px solid var(--bdr)"><td style="padding:8px 10px;font-weight:800">Gross Salary</td>' +
+          '<td style="padding:8px 10px;font-weight:900;text-align:right;color:var(--G);font-size:15px">₹' + _prFmt(r.gross_salary) + '</td></tr>' +
+          '</table></div>' +
+          '<div><div style="font-size:11px;font-weight:800;color:var(--R);text-transform:uppercase;margin-bottom:6px">Deductions</div>' +
+          '<table style="width:100%;border-collapse:collapse">' +
+          row('PF', r.pf_deduction, 'var(--R)') +
+          row('ESI', r.esi_deduction, 'var(--R)') +
+          row('TDS', r.tds, 'var(--R)') +
+          row('Other Deductions', r.other_deductions, 'var(--R)') +
+          '<tr style="border-top:2px solid var(--bdr)"><td style="padding:8px 10px;font-weight:800">Total Deductions</td>' +
+          '<td style="padding:8px 10px;font-weight:900;text-align:right;color:var(--R);font-size:15px">₹' + _prFmt(r.total_deductions) + '</td></tr>' +
+          '</table></div>' +
+          '</div>' +
+          '<div style="margin-top:14px;padding:14px;background:var(--sur2);border-radius:10px;border:2px solid var(--G);text-align:center">' +
+          '<div style="font-size:11px;font-weight:800;color:var(--tx3);text-transform:uppercase;margin-bottom:4px">Net Salary Payable</div>' +
+          '<div style="font-size:28px;font-weight:900;color:var(--G)">₹' + _prFmt(r.net_salary) + '</div>' +
+          '</div>' +
+          (r.remarks ? '<div style="margin-top:10px;font-size:12px;color:var(--tx3)"><i class="fas fa-comment-dots"></i> ' + _esc(r.remarks) + '</div>' : '') +
+          '<div style="margin-top:8px;font-size:11px;color:var(--tx3)">Payment mode: ' + _esc(r.payment_mode || '—') + ' · Status: ' + _esc(r.status) +
+          (r.payment_date ? ' · Paid on: ' + _esc(r.payment_date) : '') + '</div>';
+        _openModal('<i class="fas fa-file-invoice-dollar" style="color:var(--G)"></i> ' + _esc(empName) + ' — ' + _esc(month), body);
+      }, function(e) { _toast('Error: ' + e.message, 'err'); });
+    }
+
+    function _prMarkPaid(payrollId, empName) {
+      _openModal(
+        '<i class="fas fa-circle-check" style="color:var(--G)"></i> Mark as Paid',
+        '<p style="font-size:14px;color:var(--tx2);line-height:1.6">Mark <strong>' + _esc(empName) + '</strong>\'s payroll as Paid? This action requires Owner access.</p>',
+        function() {
+          _closeModal();
+          _gas('updatePayrollStatus', [payrollId, 'Paid'], function() {
+            _toast('✅ Payroll marked as Paid', 'ok');
+            _prLoad();
+          }, function(e) { _toast('Error: ' + e.message, 'err'); });
+        },
+        '<i class="fas fa-check"></i> Yes, Mark Paid'
+      );
+    }
+
+    function _prAddRecord() {
+      if (!_isManager()) return;
+      // Build employee select from Doer List
+      var empOpts = '<option value="">— Select Employee —</option>' + _getEmpOptions();
+
+      // Month options
+      var monthOpts = '';
+      var now2 = new Date();
+      for (var mi = 0; mi < 12; mi++) {
+        var dm = new Date(now2.getFullYear(), now2.getMonth() - mi, 1);
+        var ym = dm.getFullYear() + '-' + (dm.getMonth()+1 < 10 ? '0' : '') + (dm.getMonth()+1);
+        var lm = dm.toLocaleString('en-IN', { month: 'long', year: 'numeric' });
+        monthOpts += '<option value="' + ym + '"' + (mi===0?' selected':'') + '>' + lm + '</option>';
+      }
+
+      function fld(lbl, id, ph, type) {
+        return '<div><label style="font-size:11px;font-weight:800;color:var(--tx2);text-transform:uppercase;display:block;margin-bottom:4px">' + lbl + '</label>' +
+          '<input type="' + (type||'number') + '" id="' + id + '" class="ana-sel" placeholder="' + (ph||'0') + '" style="width:100%"></div>';
+      }
+
+      var body =
+        '<div style="display:flex;flex-direction:column;gap:12px">' +
+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+        '<div><label style="font-size:11px;font-weight:800;color:var(--tx2);text-transform:uppercase;display:block;margin-bottom:4px">Employee</label>' +
+        '<select id="prAddEmp" class="ana-sel" style="width:100%" onchange="_prAutoFillName()">' + empOpts + '</select></div>' +
+        '<div><label style="font-size:11px;font-weight:800;color:var(--tx2);text-transform:uppercase;display:block;margin-bottom:4px">Month</label>' +
+        '<select id="prAddMonth" class="ana-sel" style="width:100%">' + monthOpts + '</select></div>' +
+        '</div>' +
+
+        '<div style="font-size:11px;font-weight:800;color:var(--G);text-transform:uppercase;padding-top:4px;border-top:1px solid var(--bdr)">Earnings</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+        fld('Basic Salary (₹)', 'prBasic', 'e.g. 15000') +
+        fld('HRA (₹)', 'prHra', 'e.g. 3000') +
+        fld('Conveyance (₹)', 'prConv', 'e.g. 1600') +
+        fld('Other Allowances (₹)', 'prOther', 'e.g. 0') +
+        '</div>' +
+
+        '<div style="font-size:11px;font-weight:800;color:var(--R);text-transform:uppercase;padding-top:4px;border-top:1px solid var(--bdr)">Deductions</div>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+        fld('PF (₹)', 'prPf', 'e.g. 1800') +
+        fld('ESI (₹)', 'prEsi', 'e.g. 0') +
+        fld('TDS (₹)', 'prTds', 'e.g. 0') +
+        fld('Other Deductions (₹)', 'prOtherDed', 'e.g. 0') +
+        '</div>' +
+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+        '<div><label style="font-size:11px;font-weight:800;color:var(--tx2);text-transform:uppercase;display:block;margin-bottom:4px">Payment Mode</label>' +
+        '<select id="prMode" class="ana-sel" style="width:100%">' +
+        '<option value="Bank Transfer">Bank Transfer</option>' +
+        '<option value="Cash">Cash</option>' +
+        '<option value="Cheque">Cheque</option>' +
+        '<option value="UPI">UPI</option>' +
+        '</select></div>' +
+        '<div><label style="font-size:11px;font-weight:800;color:var(--tx2);text-transform:uppercase;display:block;margin-bottom:4px">Status</label>' +
+        '<select id="prSts" class="ana-sel" style="width:100%">' +
+        '<option value="Pending">Pending</option>' +
+        '<option value="Paid">Paid</option>' +
+        '<option value="On Hold">On Hold</option>' +
+        '</select></div>' +
+        '</div>' +
+
+        '<div><label style="font-size:11px;font-weight:800;color:var(--tx2);text-transform:uppercase;display:block;margin-bottom:4px">Remarks (optional)</label>' +
+        '<input type="text" id="prRemarks" class="ana-sel" placeholder="e.g. Salary for June 2026" style="width:100%"></div>' +
+
+        // Net preview
+        '<div style="background:var(--sur2);border-radius:10px;padding:12px;border:1.5px solid var(--bdr);display:flex;justify-content:space-between;align-items:center">' +
+        '<div style="font-size:12px;font-weight:700;color:var(--tx2)">Net Salary (auto-calculated)</div>' +
+        '<div id="prNetPreview" style="font-size:18px;font-weight:900;color:var(--G)">₹0</div>' +
+        '</div>' +
+
+        '</div>';
+
+      _openModal('<i class="fas fa-plus-circle" style="color:var(--P)"></i> Add Payroll Record', body, function() {
+        _prSaveRecord();
+      }, '<i class="fas fa-floppy-disk"></i> Save Record');
+
+      // Live net preview
+      setTimeout(function() {
+        ['prBasic','prHra','prConv','prOther','prPf','prEsi','prTds','prOtherDed'].forEach(function(id) {
+          var el = document.getElementById(id);
+          if (el) el.addEventListener('input', function() {
+            var g = (Number(document.getElementById('prBasic').value)||0) +
+                    (Number(document.getElementById('prHra').value)||0) +
+                    (Number(document.getElementById('prConv').value)||0) +
+                    (Number(document.getElementById('prOther').value)||0);
+            var d = (Number(document.getElementById('prPf').value)||0) +
+                    (Number(document.getElementById('prEsi').value)||0) +
+                    (Number(document.getElementById('prTds').value)||0) +
+                    (Number(document.getElementById('prOtherDed').value)||0);
+            var np = document.getElementById('prNetPreview');
+            if (np) np.textContent = '₹' + _prFmt(g - d);
+          });
+        });
+      }, 200);
+    }
+
+    function _prAutoFillName() {
+      // emp_id select mein se emp_name auto-fill for save
+    }
+
+    function _prSaveRecord() {
+      var empSel = document.getElementById('prAddEmp');
+      var empId  = empSel ? empSel.value : '';
+      var empName= empSel && empSel.selectedIndex >= 0 ? empSel.options[empSel.selectedIndex].text.split(' (')[0] : '';
+      var month  = (document.getElementById('prAddMonth') || {}).value || '';
+      var basic  = Number((document.getElementById('prBasic')    || {}).value || 0);
+
+      if (!empId) { _toast('Please select an employee', 'warn'); return; }
+      if (!month) { _toast('Please select a month', 'warn'); return; }
+
+      // Find dept from doer list
+      var dept = '';
+      (_D.doerList || []).forEach(function(d) { if (d.emp_id === empId) dept = d.department || ''; });
+
+      var hra   = Number((document.getElementById('prHra')      || {}).value || 0);
+      var conv  = Number((document.getElementById('prConv')     || {}).value || 0);
+      var other = Number((document.getElementById('prOther')    || {}).value || 0);
+      var pf    = Number((document.getElementById('prPf')       || {}).value || 0);
+      var esi   = Number((document.getElementById('prEsi')      || {}).value || 0);
+      var tds   = Number((document.getElementById('prTds')      || {}).value || 0);
+      var oded  = Number((document.getElementById('prOtherDed') || {}).value || 0);
+      var gross = basic + hra + conv + other;
+      var totalDed = pf + esi + tds + oded;
+
+      var payload = {
+        emp_id: empId, emp_name: empName, dept: dept, month: month,
+        basic_salary: basic, hra: hra, conveyance: conv, other_allowances: other,
+        gross_salary: gross,
+        pf_deduction: pf, esi_deduction: esi, tds: tds, other_deductions: oded,
+        total_deductions: totalDed, net_salary: gross - totalDed,
+        payment_mode: (document.getElementById('prMode')    || {}).value || 'Bank Transfer',
+        status:       (document.getElementById('prSts')     || {}).value || 'Pending',
+        remarks:      (document.getElementById('prRemarks') || {}).value || ''
+      };
+
+      _gas('savePayroll', [payload], function(r) {
+        _closeModal();
+        _toast('✅ Payroll record saved: ' + r.payroll_id, 'ok');
+        _prLoad();
+      }, function(e) { _toast('Error: ' + e.message, 'err'); });
+    }
+
+    function _prExport() {
+      var filters = {
+        month:  (document.getElementById('prMonth')  || {}).value || 'all',
+        emp_id: (document.getElementById('prEmp')    || {}).value || 'all',
+        dept:   (document.getElementById('prDept')   || {}).value || 'all',
+        status: (document.getElementById('prStatus') || {}).value || 'all'
+      };
+      _gas('getPayroll', [filters], function(data) {
+        var rows = [['Payroll ID','Emp ID','Name','Dept','Month','Basic','HRA','Conv','Other Allow','Gross','PF','ESI','TDS','Other Ded','Total Ded','Net Pay','Payment Mode','Payment Date','Status','Remarks']];
+        (data.records || []).forEach(function(r) {
+          rows.push(['"'+r.payroll_id+'"','"'+r.emp_id+'"','"'+r.emp_name+'"','"'+r.dept+'"',r.month,
+            r.basic_salary,r.hra,r.conveyance,r.other_allowances,r.gross_salary,
+            r.pf_deduction,r.esi_deduction,r.tds,r.other_deductions,r.total_deductions,r.net_salary,
+            '"'+r.payment_mode+'"',r.payment_date,r.status,'"'+r.remarks+'"']);
+        });
+        var csv = rows.map(function(r){ return r.join(','); }).join('\n');
+        var a = document.createElement('a');
+        a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
+        a.download = 'payroll_' + _today() + '.csv'; a.click();
+        _toast('Exported!', 'ok');
+      }, function(e) { _toast('Error: ' + e.message, 'err'); });
     }
 
     /* ══════════════════════════════════════════════════════════════════════
@@ -19076,7 +19489,7 @@ function _loadSetupTasks() {
       if (view === 'table') {
         el.innerHTML = '<div class="table-card"><div class="tw"><table><thead><tr>' +
           '<th>#</th><th>Employee</th><th>Department</th><th>Role</th><th>Email</th>' +
-          '<th style="text-align:center">Overdue</th><th></th>' +
+          '<th>Phone</th><th style="text-align:center">Overdue</th><th></th>' +
           '</tr></thead><tbody>' +
           emps.map(function(e,i) {
             var rClr = e.role==='OWNER'?'var(--R)':e.role==='MANAGER'?'var(--V)':'var(--P)';
@@ -19089,6 +19502,7 @@ function _loadSetupTasks() {
               '<td><span class="bdg" style="background:var(--sur2)">'+_esc(e.dept||'—')+'</span></td>' +
               '<td><span class="bdg" style="background:'+rBg+';color:'+rClr+'">'+_esc(e.role)+'</span></td>' +
               '<td style="font-size:12px;color:var(--tx2)">'+_esc(e.email||'—')+'</td>' +
+              '<td style="font-size:12px;color:var(--tx2)">'+(e.phone?'<a href="tel:'+_esc(e.phone)+'" onclick="event.stopPropagation()" style="color:var(--P)"><i class="fas fa-phone" style="font-size:10px"></i> '+_esc(e.phone)+'</a>':'<span style="color:var(--tx3)">—</span>')+'</td>' +
               '<td style="text-align:center">'+(e.overdue_delegations>0?'<span style="color:var(--R);font-weight:800">'+e.overdue_delegations+'</span>':'<span style="color:var(--tx3)">—</span>')+'</td>' +
               '<td><button class="btn btn-xs btn-outline" onclick="event.stopPropagation();_loadEmpDetail(\''+_esc(e.emp_id)+'\')"><i class="fas fa-chart-bar"></i></button></td>' +
               '</tr>';
@@ -19117,11 +19531,13 @@ function _loadSetupTasks() {
             '<div class="ed-name">'+_esc(e.name)+'</div>' +
             '<div class="ed-dept"><i class="fas fa-building" style="width:12px;color:var(--tx4)"></i> '+_esc(e.dept||'—')+'</div>' +
             '<div class="ed-email" title="'+_esc(e.email)+'"><i class="fas fa-envelope" style="width:12px;color:var(--tx4)"></i> '+_esc((e.email||'').split('@')[0]||'—')+'</div>' +
+            (e.phone ? '<div style="font-size:11px;color:var(--tx2);margin-top:3px"><i class="fas fa-phone" style="width:12px;color:var(--tx4)"></i> '+_esc(e.phone)+'</div>' : '') +
             (hasAlert?'<div class="ed-overdue-tag"><i class="fas fa-triangle-exclamation"></i> '+e.overdue_delegations+' overdue</div>':'') +
             '</div>' +
             // Actions
             '<div class="ed-card-foot">' +
             '<button class="btn btn-xs btn-outline" onclick="event.stopPropagation();_copyText(\''+_esc(e.email)+'\')"><i class="fas fa-copy"></i> Email</button>' +
+            (e.phone ? '<a class="btn btn-xs btn-outline" href="tel:'+_esc(e.phone)+'" onclick="event.stopPropagation()" style="text-decoration:none"><i class="fas fa-phone"></i> Call</a>' : '') +
             (_isManager()?'<button class="btn btn-xs" style="background:var(--Pl);color:var(--P)" onclick="event.stopPropagation();_loadEmpDetail(\''+_esc(e.emp_id)+'\')"><i class="fas fa-chart-bar"></i> Stats</button>':'') +
             '</div>' +
             '</div>';

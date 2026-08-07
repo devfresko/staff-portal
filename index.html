@@ -7232,7 +7232,7 @@
             <i class="fas fa-user-clock"></i> Attendance Analytics
           </div>
           <div class="nv" id="nv-payroll" onclick="_loadV('payroll')">
-            <i class="fas fa-indian-rupee-sign"></i> Payroll
+            <i class="fas fa-file-invoice-dollar"></i> Salary Sheet
           </div>
         </div>
 
@@ -8096,7 +8096,7 @@
        JSONP was failing: /exec redirects to echo endpoint (302)
        fetch POST works correctly with GAS doPost
     ══════════════════════════════════════════════════════════ */
-    var GAS_URL = 'https://script.google.com/macros/s/AKfycbz4OZJW8YoKkqfB9oQDF1rI7vQd8dXwhWJ4USt8551EIKWFwbb4y1_sELbU1c0Ktger/exec';
+    var GAS_URL = 'https://script.google.com/macros/s/AKfycbws3Mur5nC1GRZkQzFddpdDv7vw7Sc0sOwOoVbhW3AA5huHrzqEVC-HoMDUQcxJt3Y/exec';
     var _TOKEN  = '';
 
     var _gasActive = 0; // count of concurrent GAS calls in flight
@@ -8281,7 +8281,7 @@ function _gasX(fn, args, timeout, onOk, onErr) {
       { title: 'Delegation Analytics', route: 'delana', ico: 'fa-diagram-project', meta: 'Delegation stats', cat: 'Manager', mgr: true },
       { title: 'Attendance Analytics', route: 'attana', ico: 'fa-user-clock', meta: 'Attendance reporting', cat: 'Manager', mgr: true },
       { title: 'Muster Report', route: 'muster', ico: 'fa-id-card-clip', meta: 'Monthly attendance muster', cat: 'Manager', mgr: true },
-      { title: 'Payroll', route: 'payroll', ico: 'fa-indian-rupee-sign', meta: 'Salary, deductions & payment management', cat: 'Manager', mgr: true }
+      { title: 'Salary Sheet', route: 'payroll', ico: 'fa-indian-rupee-sign', meta: 'Attendance-based salary with IN/OUT timing', cat: 'Manager', mgr: true }
     ];
     function _openGS() {
       var ov = document.getElementById('gsOv');
@@ -10600,33 +10600,52 @@ function _loadSetupTasks() {
       var dfrom   = ym + '-01';
       var lastDay = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
       var dto     = ym + '-' + (lastDay < 10 ? '0' : '') + lastDay;
-      var fid     = paneId; // prefix for element IDs
 
-      return '<div class="fbar" style="flex-wrap:wrap;gap:8px;margin-bottom:10px">' +
-        '<div class="search-inp"><i class="fas fa-search"></i>' +
-        '<input type="text" id="' + fid + 'Search" placeholder="Search tasks..." ' +
+      return '<div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:12px;' +
+             'padding:12px 14px;margin-bottom:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center">' +
+
+        // Search
+        '<div style="position:relative;flex:1;min-width:160px;max-width:220px">' +
+        '<i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--tx3);font-size:11px;pointer-events:none"></i>' +
+        '<input type="text" id="' + paneId + 'Search" placeholder="Search tasks…" ' +
         'oninput="_dFilterSearch(\'' + paneId + '\',this.value)" ' +
-        'style="padding:7px 7px 7px 30px;border:1.5px solid var(--bdr);border-radius:8px;' +
-        'font-size:12px;background:var(--bg);color:var(--tx);outline:none;width:160px"></div>' +
-        '<label style="font-size:11px;font-weight:700;color:var(--tx3)">Status:</label>' +
-        '<select id="' + fid + 'St" class="ana-sel" onchange="_dApplyFilter(\'' + paneId + '\')">' +
+        'style="width:100%;padding:7px 10px 7px 30px;border:1.5px solid var(--bdr);border-radius:8px;' +
+        'font-size:12px;background:var(--bg);color:var(--tx);outline:none;box-sizing:border-box">' +
+        '</div>' +
+
+        // Divider
+        '<div style="width:1px;height:28px;background:var(--bdr);flex-shrink:0"></div>' +
+
+        // Status
+        '<div style="display:flex;align-items:center;gap:6px">' +
+        '<span style="font-size:10px;font-weight:800;color:var(--tx3);text-transform:uppercase;white-space:nowrap">Status</span>' +
+        '<select id="' + paneId + 'St" class="ana-sel" onchange="_dApplyFilter(\'' + paneId + '\')" style="min-width:110px">' +
         '<option value="All">All</option><option>Pending</option><option>Completed</option>' +
         '<option>Shifted</option><option>Overdue</option><option>Cancelled</option>' +
-        '</select>' +
-        '<label style="font-size:11px;font-weight:700;color:var(--tx3)">Due From:</label>' +
-        '<input type="date" id="' + fid + 'From" class="ana-sel" value="' + dfrom + '" ' +
-        'onchange="_dApplyFilter(\'' + paneId + '\')" style="min-width:128px">' +
-        '<label style="font-size:11px;font-weight:700;color:var(--tx3)">To:</label>' +
-        '<input type="date" id="' + fid + 'To" class="ana-sel" value="' + dto + '" ' +
-        'onchange="_dApplyFilter(\'' + paneId + '\')" style="min-width:128px">' +
-        '<button class="btn btn-sm btn-outline" onclick="_dClearFilter(\'' + paneId + '\')">' +
-        '<i class="fas fa-filter-circle-xmark"></i> Clear</button>' +
-        '<button class="btn btn-sm" onclick="_dApplyFilter(\'' + paneId + '\')">' +
-        '<i class="fas fa-rotate-right"></i></button>' +
-        '<div style="flex:1"></div>' +
+        '</select></div>' +
+
+        // Due date range
+        '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">' +
+        '<span style="font-size:10px;font-weight:800;color:var(--tx3);text-transform:uppercase;white-space:nowrap">Due</span>' +
+        '<input type="date" id="' + paneId + 'From" class="ana-sel" value="' + dfrom + '" ' +
+        'onchange="_dApplyFilter(\'' + paneId + '\')" style="min-width:130px">' +
+        '<span style="font-size:11px;color:var(--tx3)">→</span>' +
+        '<input type="date" id="' + paneId + 'To" class="ana-sel" value="' + dto + '" ' +
+        'onchange="_dApplyFilter(\'' + paneId + '\')" style="min-width:130px">' +
         '</div>' +
-        '<div style="font-size:11px;color:var(--tx3);margin:-4px 0 10px 2px">' +
-        '<i class="fas fa-circle-info"></i> Date filter: <strong>Due Date</strong> (Final Date)</div>' +
+
+        // Actions
+        '<div style="display:flex;gap:6px;margin-left:auto">' +
+        '<button class="btn btn-sm btn-outline" onclick="_dClearFilter(\'' + paneId + '\')" title="Clear all filters">' +
+        '<i class="fas fa-filter-circle-xmark"></i></button>' +
+        '<button class="btn btn-sm" onclick="_dApplyFilter(\'' + paneId + '\')" title="Refresh">' +
+        '<i class="fas fa-rotate-right"></i></button>' +
+        '</div>' +
+
+        '</div>' +
+        '<div style="font-size:10px;color:var(--tx3);margin:-6px 2px 10px;display:flex;align-items:center;gap:4px">' +
+        '<i class="fas fa-circle-info" style="color:var(--P)"></i>' +
+        '<span>Date filter by <strong>Due Date</strong> (Final Date) — not delegation date</span></div>' +
         '<div id="' + paneId + 'List"></div>';
     }
 
@@ -10754,30 +10773,44 @@ function _loadSetupTasks() {
       var dto    = ym + '-' + (lastDay < 10 ? '0' : '') + lastDay;
 
       pane.innerHTML =
-        '<div class="fbar" style="flex-wrap:wrap;gap:8px">' +
+        '<div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:12px;' +
+        'padding:12px 14px;margin-bottom:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center">' +
+
         // Search
-        '<div class="search-inp"><i class="fas fa-search"></i>' +
-        '<input type="text" id="dallSearch" placeholder="Search tasks..." oninput="_filterDAll(this.value)" ' +
-        'style="padding:7px 7px 7px 30px;border:1.5px solid var(--bdr);border-radius:8px;font-size:12px;background:var(--bg);color:var(--tx);outline:none;width:180px"></div>' +
+        '<div style="position:relative;flex:1;min-width:160px;max-width:220px">' +
+        '<i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--tx3);font-size:11px;pointer-events:none"></i>' +
+        '<input type="text" id="dallSearch" placeholder="Search tasks…" oninput="_filterDAll(this.value)" ' +
+        'style="width:100%;padding:7px 10px 7px 30px;border:1.5px solid var(--bdr);border-radius:8px;' +
+        'font-size:12px;background:var(--bg);color:var(--tx);outline:none;box-sizing:border-box"></div>' +
+
+        // Divider
+        '<div style="width:1px;height:28px;background:var(--bdr);flex-shrink:0"></div>' +
+
         // Status
-        '<label style="font-size:11px;font-weight:700;color:var(--tx3)">Status:</label>' +
-        '<select id="dallSt" class="ana-sel" onchange="_loadDAllFilter()">' +
+        '<div style="display:flex;align-items:center;gap:6px">' +
+        '<span style="font-size:10px;font-weight:800;color:var(--tx3);text-transform:uppercase;white-space:nowrap">Status</span>' +
+        '<select id="dallSt" class="ana-sel" onchange="_loadDAllFilter()" style="min-width:110px">' +
         '<option value="All">All</option><option>Pending</option><option>Completed</option>' +
         '<option>Shifted</option><option>Cancelled</option>' +
-        '</select>' +
-        // Due Date From
-        '<label style="font-size:11px;font-weight:700;color:var(--tx3)">Due From:</label>' +
+        '</select></div>' +
+
+        // Due date range
+        '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">' +
+        '<span style="font-size:10px;font-weight:800;color:var(--tx3);text-transform:uppercase;white-space:nowrap">Due</span>' +
         '<input type="date" id="dallFrom" class="ana-sel" value="' + dfrom + '" onchange="_loadDAllFilter()" style="min-width:130px">' +
-        // Due Date To
-        '<label style="font-size:11px;font-weight:700;color:var(--tx3)">To:</label>' +
+        '<span style="font-size:11px;color:var(--tx3)">→</span>' +
         '<input type="date" id="dallTo" class="ana-sel" value="' + dto + '" onchange="_loadDAllFilter()" style="min-width:130px">' +
-        // Clear
-        '<button class="btn btn-sm btn-outline" onclick="_dallClearFilters()" title="Clear date filters">' +
-        '<i class="fas fa-filter-circle-xmark"></i> Clear</button>' +
-        '<div class="fbar-spacer"></div>' +
         '</div>' +
-        '<div style="font-size:11px;color:var(--tx3);margin:-6px 0 10px 2px">' +
-        '<i class="fas fa-circle-info"></i> Dates filter by <strong>Due Date</strong> (Final Date), not by delegation date</div>' +
+
+        // Actions
+        '<div style="display:flex;gap:6px;margin-left:auto">' +
+        '<button class="btn btn-sm btn-outline" onclick="_dallClearFilters()" title="Clear filters"><i class="fas fa-filter-circle-xmark"></i></button>' +
+        '<button class="btn btn-sm" onclick="_loadDAllFilter()" title="Refresh"><i class="fas fa-rotate-right"></i></button>' +
+        '</div>' +
+        '</div>' +
+        '<div style="font-size:10px;color:var(--tx3);margin:-6px 2px 10px;display:flex;align-items:center;gap:4px">' +
+        '<i class="fas fa-circle-info" style="color:var(--P)"></i>' +
+        '<span>Date filter by <strong>Due Date</strong> (Final Date) — not delegation date</span></div>' +
         '<div id="dallList">' + _skel(3) + '</div>';
 
       _loadDAllFilter();
@@ -18647,8 +18680,8 @@ function _loadSetupTasks() {
 
       document.getElementById('content').innerHTML =
         '<div class="mod-head">' +
-        '<div><div class="mod-title"><i class="fas fa-indian-rupee-sign" style="color:var(--G)"></i> Payroll</div>' +
-        '<div class="mod-sub">Attendance-based salary — select month to see staff-wise breakdown</div></div>' +
+        '<div><div class="mod-title"><i class="fas fa-file-invoice-dollar" style="color:var(--G)"></i> Salary Sheet</div>' +
+        '<div class="mod-sub">Month select karo — attendance & leave ke basis pe salary tayaar hogi</div></div>' +
         '<button class="btn btn-sm btn-outline" id="prExportBtn" onclick="_prExportCSV()" style="display:none">' +
         '<i class="fas fa-file-csv"></i> Export</button>' +
         '</div>' +
@@ -18844,15 +18877,56 @@ function _loadSetupTasks() {
       log.forEach(function(day) {
         var dt   = day.date.split('-')[2]; // day number
         var clr  = statusColor[day.status] || 'var(--tx3)';
-        var bg   = day.status === 'P' ? 'var(--Gl)' : day.status === 'HD' ? 'var(--Tl)' :
-                   day.status === 'A' || day.status === 'LWP' ? 'var(--Rl)' :
-                   day.status === 'WO' || day.status === 'H' ? 'var(--sur2)' : 'var(--Pl)';
+        var bg   = day.status === 'P'   ? 'var(--Gl)' : day.status === 'HD' ? 'var(--Tl)' :
+                   day.status === 'A'   || day.status === 'LWP' ? 'var(--Rl)' :
+                   day.status === 'WO'  || day.status === 'H' ? 'var(--sur2)' : 'var(--Pl)';
         var lbl  = statusLabel[day.status] || day.status;
-        calHtml += '<div style="padding:4px 2px;border-radius:5px;background:'+bg+';color:'+clr+';font-weight:700">' +
-          '<div style="font-size:9px;color:var(--tx3)">'+dt+'</div>' +
-          '<div>'+lbl+'</div></div>';
+        // Show IN/OUT if present
+        var hasTime = day.in && day.in !== '-' && day.in !== '';
+        var tooltipOut = (day.out && day.out !== '-') ? ' | OUT: ' + day.out : '';
+        var tooltip = hasTime ? ('IN: ' + day.in + tooltipOut) : '';
+        calHtml += '<div style="padding:3px 2px;border-radius:5px;background:'+bg+';color:'+clr+';font-weight:700;' +
+          'cursor:'+(hasTime?'pointer':'default')+'"' +
+          (hasTime ? ' title="' + tooltip + '"' : '') + '>' +
+          '<div style="font-size:9px;color:var(--tx3)">' + dt + '</div>' +
+          '<div style="font-size:9px">' + lbl + '</div>' +
+          (hasTime ? '<div style="font-size:8px;color:'+clr+';opacity:.85;line-height:1.1">' + day.in + '</div>' : '') +
+          '</div>';
       });
       calHtml += '</div>';
+
+      // IN/OUT timing table — only show days where employee was present
+      var presentLogs = log.filter(function(d){ return d.in && d.in !== '-' && d.in !== ''; });
+      var timingHtml = '';
+      if (presentLogs.length > 0) {
+        timingHtml =
+          '<div style="margin-bottom:14px">' +
+          '<div style="font-size:11px;font-weight:800;color:var(--tx2);text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:6px">' +
+          '<i class="fas fa-clock" style="color:var(--P)"></i> Attendance Timing</div>' +
+          '<div style="overflow-x:auto;border-radius:8px;border:1px solid var(--bdr)">' +
+          '<table style="width:100%;border-collapse:collapse;font-size:12px;min-width:340px">' +
+          '<thead><tr style="background:var(--sur2)">' +
+          '<th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--tx3);font-weight:800;text-transform:uppercase;white-space:nowrap">Date</th>' +
+          '<th style="padding:7px 10px;text-align:left;font-size:10px;color:var(--tx3);font-weight:800;text-transform:uppercase">Status</th>' +
+          '<th style="padding:7px 10px;text-align:center;font-size:10px;color:var(--G);font-weight:800;text-transform:uppercase">IN ↓</th>' +
+          '<th style="padding:7px 10px;text-align:center;font-size:10px;color:var(--R);font-weight:800;text-transform:uppercase">OUT ↑</th>' +
+          '<th style="padding:7px 10px;text-align:center;font-size:10px;color:var(--tx3);font-weight:800;text-transform:uppercase">Hours</th>' +
+          '</tr></thead><tbody>' +
+          presentLogs.map(function(d, i) {
+            var dow = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][new Date(d.date+'T00:00:00').getDay()];
+            var dd  = d.date.split('-')[2] + ' ' + dow;
+            var bg  = i % 2 === 0 ? '' : 'background:var(--sur2)';
+            var stClr = d.status==='P'?'var(--G)':d.status==='HD'?'var(--T)':'var(--O)';
+            return '<tr style="'+bg+'">' +
+              '<td style="padding:7px 10px;font-weight:700;white-space:nowrap">'+dd+'</td>' +
+              '<td style="padding:7px 10px"><span style="font-size:10px;font-weight:800;color:'+stClr+'">'+d.status+'</span></td>' +
+              '<td style="padding:7px 10px;text-align:center;font-weight:700;color:var(--G)">'+(d.in||'—')+'</td>' +
+              '<td style="padding:7px 10px;text-align:center;font-weight:700;color:var(--R)">'+(d.out&&d.out!=='-'?d.out:'—')+'</td>' +
+              '<td style="padding:7px 10px;text-align:center;color:var(--tx2)">'+(d.hours&&d.hours!=='-'?d.hours:'—')+'</td>' +
+              '</tr>';
+          }).join('') +
+          '</tbody></table></div></div>';
+      }
 
       // Salary breakdown
       function brow(lbl, val, clr) {
@@ -18905,12 +18979,18 @@ function _loadSetupTasks() {
         '<div style="font-size:11px;color:var(--tx3);margin-bottom:12px">' + _esc(emp.dept) + ' · ' + _esc(emp.emp_id) + '</div>' +
         attStatsHtml +
         calHtml +
+        timingHtml +
         salaryHtml +
         '<div style="background:linear-gradient(135deg,var(--Pl),var(--Gl));border-radius:10px;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;border:2px solid var(--G)">' +
         '<div style="font-size:13px;font-weight:800;color:var(--tx2)">Net Salary Payable</div>' +
         '<div style="font-size:26px;font-weight:900;color:var(--G)">₹' + _prFmt(emp.net_salary) + '</div>' +
         '</div>'
       );
+      // Widen modal so timing table fits comfortably
+      setTimeout(function() {
+        var m = document.getElementById('modal');
+        if (m) { m.style.maxWidth = '700px'; m.style.width = '96vw'; }
+      }, 40);
     }
 
     function _prExportCSV() {

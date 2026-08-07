@@ -10629,12 +10629,18 @@ function _loadSetupTasks() {
       var pane = document.getElementById('dallPane');
       if (!pane) return;
 
+      // If filters already exist (tab revisited), just reload data — don't re-render filter bar
+      if (document.getElementById('dallFrom')) {
+        _loadDAllFilter();
+        return;
+      }
+
       // Default date range: current month
       var now    = new Date();
       var ym     = now.getFullYear() + '-' + (now.getMonth()+1 < 10 ? '0' : '') + (now.getMonth()+1);
       var dfrom  = ym + '-01';
-      var dto    = ym + '-' + (new Date(now.getFullYear(), now.getMonth()+1, 0).getDate() < 10 ? '0' : '') +
-                   new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+      var lastDay = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+      var dto    = ym + '-' + (lastDay < 10 ? '0' : '') + lastDay;
 
       pane.innerHTML =
         '<div class="fbar" style="flex-wrap:wrap;gap:8px">' +
@@ -18647,7 +18653,8 @@ function _loadSetupTasks() {
           ? '<span style="background:var(--Rl);color:var(--R);padding:1px 6px;border-radius:5px;font-size:9px;font-weight:800">LWP:'+e.lwp_days+'d</span>' : '';
 
         return '<div class="card" style="padding:0;overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .15s" ' +
-          'onclick="_prOpenDetail(' + JSON.stringify(e.emp_id) + ')" ' +
+          'data-empid="' + _esc(e.emp_id) + '" ' +
+          'onclick="_prOpenDetail(this.getAttribute(\'data-empid\'))" ' +
           'onmouseenter="this.style.transform=\'translateY(-2px)\';this.style.boxShadow=\'0 8px 24px rgba(0,0,0,.12)\'" ' +
           'onmouseleave="this.style.transform=\'\';this.style.boxShadow=\'\'">' +
 

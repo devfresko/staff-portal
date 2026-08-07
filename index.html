@@ -8096,7 +8096,7 @@
        JSONP was failing: /exec redirects to echo endpoint (302)
        fetch POST works correctly with GAS doPost
     ══════════════════════════════════════════════════════════ */
-    var GAS_URL = 'https://script.google.com/macros/s/AKfycbztB-l4O7V4FbWYv3gCU3U4C4HsRHYzZnCgI32CkPIClVCoLJdeBURpCicRCUUxGcBo/exec';
+    var GAS_URL = 'https://script.google.com/macros/s/AKfycbz4OZJW8YoKkqfB9oQDF1rI7vQd8dXwhWJ4USt8551EIKWFwbb4y1_sELbU1c0Ktger/exec';
     var _TOKEN  = '';
 
     var _gasActive = 0; // count of concurrent GAS calls in flight
@@ -10593,37 +10593,148 @@ function _loadSetupTasks() {
       }, function() {});
     }
 
+    // ── Shared filter bar builder for Mine / Out panes ────────────────────
+    function _dFilterBar(paneId) {
+      var now     = new Date();
+      var ym      = now.getFullYear() + '-' + (now.getMonth()+1 < 10 ? '0' : '') + (now.getMonth()+1);
+      var dfrom   = ym + '-01';
+      var lastDay = new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+      var dto     = ym + '-' + (lastDay < 10 ? '0' : '') + lastDay;
+      var fid     = paneId; // prefix for element IDs
+
+      return '<div class="fbar" style="flex-wrap:wrap;gap:8px;margin-bottom:10px">' +
+        '<div class="search-inp"><i class="fas fa-search"></i>' +
+        '<input type="text" id="' + fid + 'Search" placeholder="Search tasks..." ' +
+        'oninput="_dFilterSearch(\'' + paneId + '\',this.value)" ' +
+        'style="padding:7px 7px 7px 30px;border:1.5px solid var(--bdr);border-radius:8px;' +
+        'font-size:12px;background:var(--bg);color:var(--tx);outline:none;width:160px"></div>' +
+        '<label style="font-size:11px;font-weight:700;color:var(--tx3)">Status:</label>' +
+        '<select id="' + fid + 'St" class="ana-sel" onchange="_dApplyFilter(\'' + paneId + '\')">' +
+        '<option value="All">All</option><option>Pending</option><option>Completed</option>' +
+        '<option>Shifted</option><option>Overdue</option><option>Cancelled</option>' +
+        '</select>' +
+        '<label style="font-size:11px;font-weight:700;color:var(--tx3)">Due From:</label>' +
+        '<input type="date" id="' + fid + 'From" class="ana-sel" value="' + dfrom + '" ' +
+        'onchange="_dApplyFilter(\'' + paneId + '\')" style="min-width:128px">' +
+        '<label style="font-size:11px;font-weight:700;color:var(--tx3)">To:</label>' +
+        '<input type="date" id="' + fid + 'To" class="ana-sel" value="' + dto + '" ' +
+        'onchange="_dApplyFilter(\'' + paneId + '\')" style="min-width:128px">' +
+        '<button class="btn btn-sm btn-outline" onclick="_dClearFilter(\'' + paneId + '\')">' +
+        '<i class="fas fa-filter-circle-xmark"></i> Clear</button>' +
+        '<button class="btn btn-sm" onclick="_dApplyFilter(\'' + paneId + '\')">' +
+        '<i class="fas fa-rotate-right"></i></button>' +
+        '<div style="flex:1"></div>' +
+        '</div>' +
+        '<div style="font-size:11px;color:var(--tx3);margin:-4px 0 10px 2px">' +
+        '<i class="fas fa-circle-info"></i> Date filter: <strong>Due Date</strong> (Final Date)</div>' +
+        '<div id="' + paneId + 'List"></div>';
+    }
+
+    // Apply filter on Mine / Out panes (client-side on cached data)
+    function _dApplyFilter(paneId) {
+      var cache  = paneId === 'dmine' ? _D.myDelegationsMine : _D.myDelegatedOut;
+      var list   = document.getElementById(paneId + 'List');
+      var isOut  = (paneId === 'dout');
+      if (!cache || !list) return;
+
+      var st   = (document.getElementById(paneId + 'St')   || {}).value || 'All';
+      var from = (document.getElementById(paneId + 'From') || {}).value || '';
+      var to   = (document.getElementById(paneId + 'To')   || {}).value || '';
+
+      var filtered = cache.filter(function(d) {
+        // Status filter
+        if (st !== 'All') {
+          var effStatus = d.is_overdue && d.status !== 'Completed' ? 'Overdue' : d.status;
+          if (effStatus !== st) return false;
+        }
+        // Due date filter (Final Date)
+        if (from || to) {
+          var due = d.final_date || d.first_date || '';
+          if (from && due < from) return false;
+          if (to   && due > to)   return false;
+        }
+        return true;
+      });
+
+      _renderDelegCardsEl(filtered, list, isOut);
+    }
+
+    function _dClearFilter(paneId) {
+      var stEl   = document.getElementById(paneId + 'St');
+      var fromEl = document.getElementById(paneId + 'From');
+      var toEl   = document.getElementById(paneId + 'To');
+      var srEl   = document.getElementById(paneId + 'Search');
+      if (stEl)   stEl.value   = 'All';
+      if (fromEl) fromEl.value = '';
+      if (toEl)   toEl.value   = '';
+      if (srEl)   srEl.value   = '';
+      // Also reset cached data so fresh load gets all records
+      if (paneId === 'dmine') _D.myDelegationsMine = null;
+      if (paneId === 'dout')  _D.myDelegatedOut    = null;
+      if (paneId === 'dmine') _loadDMine();
+      else if (paneId === 'dout') _loadDOut();
+      else _dApplyFilter(paneId);
+    }
+
+    function _dFilterSearch(paneId, q) {
+      q = (q || '').toLowerCase();
+      var list = document.getElementById(paneId + 'List');
+      if (!list) return;
+      list.querySelectorAll('.dcard').forEach(function(c) {
+        c.style.display = !q || c.textContent.toLowerCase().indexOf(q) > -1 ? '' : 'none';
+      });
+    }
+
     function _loadDMine() {
       var pane = document.getElementById('dminePane');
       if (!pane) return;
-      // Use cache if available
-      if (_D.myDelegationsMine) { _renderDelegCards(_D.myDelegationsMine, 'dminePane', false); return; }
-      pane.innerHTML = _skel(3, 'sk-h5');
+
+      // Render filter bar first (always, so filters are available immediately)
+      if (!document.getElementById('dmineFrom')) {
+        pane.innerHTML = _dFilterBar('dmine') ;
+      }
+
+      var list = document.getElementById('dmineList');
+      if (list) list.innerHTML = _skel(3, 'sk-h5');
+
+      // Use cache if available — just re-apply filter
+      if (_D.myDelegationsMine) { _dApplyFilter('dmine'); return; }
+
       _gas('getMyDelegations', ['All'], function(dels) {
         _D.myDelegationsMine = dels;
-        _renderDelegCards(dels, 'dminePane', false);
-      }, function(e) { pane.innerHTML = (e && e.message && e.message.indexOf('Network') > -1
-              ? '<div style="text-align:center;padding:32px 16px">' +
-                '<div style="font-size:32px;margin-bottom:10px">📡</div>' +
-                '<div style="font-size:14px;font-weight:800;color:var(--tx);margin-bottom:4px">Connection Error</div>' +
-                '<div style="font-size:12px;color:var(--tx2);margin-bottom:14px">Server se connect nahi ho pa raha. Thodi der mein retry karo.</div>' +
-                '<button class="btn btn-sm" onclick="_forceRefresh()"><i class="fas fa-rotate-right"></i> Retry</button></div>'
-              : '<div class="te">' + _esc(e.message) + '</div>'); });
+        _dApplyFilter('dmine');
+      }, function(e) {
+        if (list) list.innerHTML = e && e.message && e.message.indexOf('Network') > -1
+          ? '<div style="text-align:center;padding:32px 16px"><div style="font-size:32px;margin-bottom:10px">📡</div>' +
+            '<div style="font-size:14px;font-weight:800;color:var(--tx);margin-bottom:4px">Connection Error</div>' +
+            '<button class="btn btn-sm" onclick="_forceRefresh()"><i class="fas fa-rotate-right"></i> Retry</button></div>'
+          : '<div class="te">' + _esc(e.message) + '</div>';
+      });
     }
+
     function _loadDOut() {
       var pane = document.getElementById('doutPane');
       if (!pane) return;
-      pane.innerHTML = _skel(3, 'sk-h5');
+
+      if (!document.getElementById('doutFrom')) {
+        pane.innerHTML = _dFilterBar('dout');
+      }
+
+      var list = document.getElementById('doutList');
+      if (list) list.innerHTML = _skel(3, 'sk-h5');
+
+      if (_D.myDelegatedOut) { _dApplyFilter('dout'); return; }
+
       _gas('getMyDelegatedOut', ['All'], function(dels) {
         _D.myDelegatedOut = dels;
-        _renderDelegCards(dels, 'doutPane', true);
-      }, function(e) { pane.innerHTML = (e && e.message && e.message.indexOf('Network') > -1
-              ? '<div style="text-align:center;padding:32px 16px">' +
-                '<div style="font-size:32px;margin-bottom:10px">📡</div>' +
-                '<div style="font-size:14px;font-weight:800;color:var(--tx);margin-bottom:4px">Connection Error</div>' +
-                '<div style="font-size:12px;color:var(--tx2);margin-bottom:14px">Server se connect nahi ho pa raha. Thodi der mein retry karo.</div>' +
-                '<button class="btn btn-sm" onclick="_forceRefresh()"><i class="fas fa-rotate-right"></i> Retry</button></div>'
-              : '<div class="te">' + _esc(e.message) + '</div>'); });
+        _dApplyFilter('dout');
+      }, function(e) {
+        if (list) list.innerHTML = e && e.message && e.message.indexOf('Network') > -1
+          ? '<div style="text-align:center;padding:32px 16px"><div style="font-size:32px;margin-bottom:10px">📡</div>' +
+            '<div style="font-size:14px;font-weight:800;color:var(--tx);margin-bottom:4px">Connection Error</div>' +
+            '<button class="btn btn-sm" onclick="_forceRefresh()"><i class="fas fa-rotate-right"></i> Retry</button></div>'
+          : '<div class="te">' + _esc(e.message) + '</div>';
+      });
     }
     function _loadDAll() {
       var pane = document.getElementById('dallPane');
@@ -10700,13 +10811,13 @@ function _loadSetupTasks() {
       _gas('getAllDelegations', [filters], function (dels) {
         _D.allDels = dels;
         _renderDelegCardsEl(dels, list, true);
-      }, function (e) { list.innerHTML = (e && e.message && e.message.indexOf('Network') > -1
-              ? '<div style="text-align:center;padding:32px 16px">' +
-                '<div style="font-size:32px;margin-bottom:10px">📡</div>' +
-                '<div style="font-size:14px;font-weight:800;color:var(--tx);margin-bottom:4px">Connection Error</div>' +
-                '<div style="font-size:12px;color:var(--tx2);margin-bottom:14px">Server se connect nahi ho pa raha.</div>' +
-                '<button class="btn btn-sm" onclick="_forceRefresh()"><i class="fas fa-rotate-right"></i> Retry</button></div>'
-              : '<div class="te">' + _esc(e.message) + '</div>'); });
+      }, function (e) {
+        list.innerHTML = e && e.message && e.message.indexOf('Network') > -1
+          ? '<div style="text-align:center;padding:32px 16px"><div style="font-size:32px;margin-bottom:10px">📡</div>' +
+            '<div style="font-size:14px;font-weight:800;color:var(--tx);margin-bottom:4px">Connection Error</div>' +
+            '<button class="btn btn-sm" onclick="_forceRefresh()"><i class="fas fa-rotate-right"></i> Retry</button></div>'
+          : '<div class="te">' + _esc(e.message) + '</div>';
+      });
     }
     function _exportDelegAll() {
       var dels = _D.allDels || [];

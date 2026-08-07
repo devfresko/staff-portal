@@ -7159,7 +7159,7 @@
             onerror="this.style.display='none'">
           <div>
             <div class="sb-brand-txt">Fresko</div>
-            <div class="sb-brand-ver">Portal</div>
+            <div class="sb-brand-ver">Portal v3.0</div>
           </div>
         </div>
         <div class="sb-prof" onclick="_loadV('profile')">
@@ -8096,7 +8096,7 @@
        JSONP was failing: /exec redirects to echo endpoint (302)
        fetch POST works correctly with GAS doPost
     ══════════════════════════════════════════════════════════ */
-    var GAS_URL = 'https://script.google.com/macros/s/AKfycbz0JHryp3JaOp3S46iRUz0IMOIsLNq0A9Lqr5Byl4kCxFqSS2a9XBQlFeNmoOjYER90/exec';
+    var GAS_URL = 'https://script.google.com/macros/s/AKfycbztB-l4O7V4FbWYv3gCU3U4C4HsRHYzZnCgI32CkPIClVCoLJdeBURpCicRCUUxGcBo/exec';
     var _TOKEN  = '';
 
     var _gasActive = 0; // count of concurrent GAS calls in flight
@@ -10628,17 +10628,51 @@ function _loadSetupTasks() {
     function _loadDAll() {
       var pane = document.getElementById('dallPane');
       if (!pane) return;
+
+      // Default date range: current month
+      var now    = new Date();
+      var ym     = now.getFullYear() + '-' + (now.getMonth()+1 < 10 ? '0' : '') + (now.getMonth()+1);
+      var dfrom  = ym + '-01';
+      var dto    = ym + '-' + (new Date(now.getFullYear(), now.getMonth()+1, 0).getDate() < 10 ? '0' : '') +
+                   new Date(now.getFullYear(), now.getMonth()+1, 0).getDate();
+
       pane.innerHTML =
-        '<div class="fbar">' +
-        '<div class="search-inp"><i class="fas fa-search"></i><input type="text" id="dallSearch" placeholder="Search tasks..." oninput="_filterDAll(this.value)" style="padding:7px 7px 7px 30px;border:1.5px solid var(--bdr);border-radius:8px;font-size:12px;background:var(--bg);color:var(--tx);outline:none;width:200px"></div>' +
-        '<label>Status:</label>' +
-        '<select id="dallSt" onchange="_loadDAllFilter()">' +
-        '<option value="All">All</option><option>Pending</option><option>Completed</option><option>Shifted</option><option>Cancelled</option>' +
+        '<div class="fbar" style="flex-wrap:wrap;gap:8px">' +
+        // Search
+        '<div class="search-inp"><i class="fas fa-search"></i>' +
+        '<input type="text" id="dallSearch" placeholder="Search tasks..." oninput="_filterDAll(this.value)" ' +
+        'style="padding:7px 7px 7px 30px;border:1.5px solid var(--bdr);border-radius:8px;font-size:12px;background:var(--bg);color:var(--tx);outline:none;width:180px"></div>' +
+        // Status
+        '<label style="font-size:11px;font-weight:700;color:var(--tx3)">Status:</label>' +
+        '<select id="dallSt" class="ana-sel" onchange="_loadDAllFilter()">' +
+        '<option value="All">All</option><option>Pending</option><option>Completed</option>' +
+        '<option>Shifted</option><option>Cancelled</option>' +
         '</select>' +
+        // Due Date From
+        '<label style="font-size:11px;font-weight:700;color:var(--tx3)">Due From:</label>' +
+        '<input type="date" id="dallFrom" class="ana-sel" value="' + dfrom + '" onchange="_loadDAllFilter()" style="min-width:130px">' +
+        // Due Date To
+        '<label style="font-size:11px;font-weight:700;color:var(--tx3)">To:</label>' +
+        '<input type="date" id="dallTo" class="ana-sel" value="' + dto + '" onchange="_loadDAllFilter()" style="min-width:130px">' +
+        // Clear
+        '<button class="btn btn-sm btn-outline" onclick="_dallClearFilters()" title="Clear date filters">' +
+        '<i class="fas fa-filter-circle-xmark"></i> Clear</button>' +
         '<div class="fbar-spacer"></div>' +
-        
         '</div>' +
+        '<div style="font-size:11px;color:var(--tx3);margin:-6px 0 10px 2px">' +
+        '<i class="fas fa-circle-info"></i> Dates filter by <strong>Due Date</strong> (Final Date), not by delegation date</div>' +
         '<div id="dallList">' + _skel(3) + '</div>';
+
+      _loadDAllFilter();
+    }
+
+    function _dallClearFilters() {
+      var f = document.getElementById('dallFrom');
+      var t = document.getElementById('dallTo');
+      var s = document.getElementById('dallSt');
+      if (f) f.value = '';
+      if (t) t.value = '';
+      if (s) s.value = 'All';
       _loadDAllFilter();
     }
     function _filterDAll(q) {
@@ -10648,18 +10682,23 @@ function _loadSetupTasks() {
       });
     }
     function _loadDAllFilter() {
-      var st = document.getElementById('dallSt') ? document.getElementById('dallSt').value : 'All';
+      var st   = (document.getElementById('dallSt')   || {}).value || 'All';
+      var from = (document.getElementById('dallFrom') || {}).value || '';
+      var to   = (document.getElementById('dallTo')   || {}).value || '';
       var list = document.getElementById('dallList');
       if (!list) return;
       list.innerHTML = _skel(3);
-      _gas('getAllDelegations', [{ status: st }], function (dels) {
+      var filters = { status: st };
+      if (from) filters.from_date = from;
+      if (to)   filters.to_date   = to;
+      _gas('getAllDelegations', [filters], function (dels) {
         _D.allDels = dels;
         _renderDelegCardsEl(dels, list, true);
       }, function (e) { list.innerHTML = (e && e.message && e.message.indexOf('Network') > -1
               ? '<div style="text-align:center;padding:32px 16px">' +
                 '<div style="font-size:32px;margin-bottom:10px">📡</div>' +
                 '<div style="font-size:14px;font-weight:800;color:var(--tx);margin-bottom:4px">Connection Error</div>' +
-                '<div style="font-size:12px;color:var(--tx2);margin-bottom:14px">Server se connect nahi ho pa raha. Thodi der mein retry karo.</div>' +
+                '<div style="font-size:12px;color:var(--tx2);margin-bottom:14px">Server se connect nahi ho pa raha.</div>' +
                 '<button class="btn btn-sm" onclick="_forceRefresh()"><i class="fas fa-rotate-right"></i> Retry</button></div>'
               : '<div class="te">' + _esc(e.message) + '</div>'); });
     }
@@ -18453,506 +18492,326 @@ function _loadSetupTasks() {
 
     /* ══════════════════════════════════════════════════════════════════════
        PAYROLL MODULE — Management only (OWNER / MANAGER)
-       Accountant-friendly: month select → salary summary ready
-       Shows all employees with their salary components for the month.
-       OWNER can mark as Paid. Salary Sheet printable / exportable.
+       Employee Directory style: cards → click → salary breakdown
+       Auto-computed from Attendance + Approved Leave + Doer List salary data
+       Doer List columns needed: Basic Salary, HRA, Conveyance,
+         Other Allowances, PF Deduction, ESI Deduction, TDS, Other Deductions
     ══════════════════════════════════════════════════════════════════════ */
 
     function _prFmt(n) {
       return Number(n || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 });
     }
 
-    // Build month options — last 12 months
-    function _prMonthOpts(selectedVal) {
+    // Build month options (last 12 months)
+    function _prMonthOpts(sel) {
       var opts = '';
-      var now = new Date();
+      var now  = new Date();
       for (var i = 0; i < 12; i++) {
         var d = new Date(now.getFullYear(), now.getMonth() - i, 1);
         var y = d.getFullYear(), m = d.getMonth() + 1;
         var val = y + '-' + (m < 10 ? '0' : '') + m;
         var lbl = d.toLocaleString('en-IN', { month: 'long', year: 'numeric' });
-        opts += '<option value="' + val + '"' + (val === (selectedVal || _currMonth()) ? ' selected' : '') + '>' + lbl + '</option>';
+        opts += '<option value="' + val + '"' + (val === sel ? ' selected' : '') + '>' + lbl + '</option>';
       }
       return opts;
+    }
+
+    function _currMonth() {
+      var n = new Date(); var m = n.getMonth()+1;
+      return n.getFullYear() + '-' + (m < 10 ? '0' : '') + m;
     }
 
     function _vPayroll() {
       if (!_isManager()) {
         document.getElementById('content').innerHTML =
-          '<div class="empty-state"><i class="fas fa-lock"></i>' +
-          '<h4>Access Restricted</h4><p>Manager access required.</p></div>';
+          '<div class="empty-state"><i class="fas fa-lock"></i><h4>Access Restricted</h4><p>Manager access required.</p></div>';
         return;
       }
 
       document.getElementById('content').innerHTML =
         '<div class="mod-head">' +
         '<div><div class="mod-title"><i class="fas fa-indian-rupee-sign" style="color:var(--G)"></i> Payroll</div>' +
-        '<div class="mod-sub">Monthly salary sheet — select month, review, mark paid</div></div>' +
-        '<div style="display:flex;gap:8px">' +
-        '<button class="btn btn-sm btn-outline" onclick="_prExportCSV()"><i class="fas fa-file-csv"></i> Export CSV</button>' +
-        '<button class="btn btn-sm" onclick="_prAddRow()"><i class="fas fa-plus"></i> Add Employee</button>' +
-        '</div>' +
+        '<div class="mod-sub">Attendance-based salary — select month to see staff-wise breakdown</div></div>' +
+        '<button class="btn btn-sm btn-outline" id="prExportBtn" onclick="_prExportCSV()" style="display:none">' +
+        '<i class="fas fa-file-csv"></i> Export</button>' +
         '</div>' +
 
-        // Month selector — prominent, centred
-        '<div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:14px;padding:16px 20px;margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">' +
-        '<i class="fas fa-calendar-alt" style="color:var(--P);font-size:18px"></i>' +
-        '<div style="flex:1;min-width:200px">' +
-        '<label style="font-size:11px;font-weight:800;color:var(--tx2);text-transform:uppercase;display:block;margin-bottom:4px">Select Month for Salary Sheet</label>' +
-        '<select id="prMonthSel" class="ana-sel" onchange="_prLoad()" style="width:100%;max-width:300px;font-size:14px;font-weight:700">' + _prMonthOpts() + '</select>' +
-        '</div>' +
-        '<div id="prMonthStatus" style="font-size:12px;color:var(--tx3)"></div>' +
-        '<button class="btn btn-sm" onclick="_prLoad()"><i class="fas fa-rotate-right"></i> Refresh</button>' +
+        // Month + Dept selectors
+        '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:12px 16px;' +
+        'background:var(--sur2);border:1px solid var(--bdr);border-radius:12px;margin-bottom:16px">' +
+        '<i class="fas fa-calendar-alt" style="color:var(--P);font-size:16px"></i>' +
+        '<select id="prMonthSel" class="ana-sel" onchange="_prLoad()" style="font-size:14px;font-weight:700;min-width:180px">' +
+        _prMonthOpts(_currMonth()) + '</select>' +
+        '<select id="prDeptSel" class="ana-sel" onchange="_prLoad()">' +
+        '<option value="all">All Departments</option>' + _getDeptOptions() + '</select>' +
+        '<button class="btn btn-sm" onclick="_prLoad()"><i class="fas fa-rotate-right"></i></button>' +
+        '<div id="prMonthInfo" style="font-size:11px;color:var(--tx3);margin-left:4px"></div>' +
         '</div>' +
 
         // Summary strip
         '<div id="prSummaryStrip" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px"></div>' +
 
-        // Main payroll table
-        '<div id="prTableWrap">' +
-        '<div style="text-align:center;padding:40px;color:var(--tx3)"><i class="fas fa-circle-notch fa-spin" style="font-size:24px;color:var(--P)"></i><div style="margin-top:10px;font-weight:600">Loading salary data…</div></div>' +
-        '</div>';
+        // Employee cards grid
+        '<div id="prEmpGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">' +
+        '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--tx3)">' +
+        '<i class="fas fa-circle-notch fa-spin" style="font-size:24px;color:var(--P)"></i>' +
+        '<div style="margin-top:10px;font-weight:600">Loading payroll data…</div></div>' +
+        '</div>' +
+
+        // Employee detail panel (hidden initially)
+        '<div id="prDetailPanel" style="display:none"></div>';
 
       _prLoad();
     }
 
+    var _prData = null; // cache current payroll data
+
     function _prLoad() {
       var month = (document.getElementById('prMonthSel') || {}).value || _currMonth();
-      var wrap  = document.getElementById('prTableWrap');
+      var dept  = (document.getElementById('prDeptSel')  || {}).value || 'all';
+      var grid  = document.getElementById('prEmpGrid');
       var strip = document.getElementById('prSummaryStrip');
-      var statusEl = document.getElementById('prMonthStatus');
-      if (!wrap) return;
+      var info  = document.getElementById('prMonthInfo');
+      var expBtn= document.getElementById('prExportBtn');
+      if (grid) grid.innerHTML =
+        '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--tx3)">' +
+        '<i class="fas fa-circle-notch fa-spin" style="font-size:22px;color:var(--P)"></i>' +
+        '<div style="margin-top:10px;font-weight:600">Computing salaries…</div>' +
+        '<div style="font-size:11px;color:var(--tx3);margin-top:4px">Attendance + leaves + deductions calculate ho rahi hain</div></div>';
+      if (strip) strip.innerHTML = '';
+      if (expBtn) expBtn.style.display = 'none';
 
-      wrap.innerHTML = '<div style="text-align:center;padding:40px;color:var(--tx3)"><i class="fas fa-circle-notch fa-spin" style="font-size:24px;color:var(--P)"></i><div style="margin-top:10px;font-weight:600">Loading…</div></div>';
-      if (statusEl) statusEl.textContent = '';
-
-      _gas('getPayroll', [{ month: month, emp_id: 'all', dept: 'all', status: 'all' }], function(data) {
-        _prRender(data, month);
+      _gas('getPayrollSummary', [month, dept], function(data) {
+        _prData = data;
+        _prRenderCards(data);
+        if (expBtn) expBtn.style.display = '';
       }, function(e) {
-        wrap.innerHTML = '<div class="te"><i class="fas fa-exclamation-triangle"></i> ' + _esc(e.message) +
-          '<br><br><div style="font-size:12px;color:var(--tx3)">Tip: Apps Script editor mein <code>setupPayrollTab()</code> run karo to create the Payroll sheet.</div></div>';
+        if (grid) grid.innerHTML =
+          '<div class="te" style="grid-column:1/-1"><i class="fas fa-exclamation-triangle"></i> ' + _esc(e.message) +
+          '<br><br><div style="font-size:12px;color:var(--tx3)">Tip: Doer List mein salary columns add karo:<br>' +
+          '<code>Basic Salary, HRA, Conveyance, Other Allowances, PF Deduction, ESI Deduction, TDS, Other Deductions</code></div></div>';
       });
     }
 
-    function _prRender(data, month) {
-      var wrap  = document.getElementById('prTableWrap');
+    function _prRenderCards(data) {
+      var grid  = document.getElementById('prEmpGrid');
       var strip = document.getElementById('prSummaryStrip');
-      var statusEl = document.getElementById('prMonthStatus');
-      if (!wrap) return;
+      var info  = document.getElementById('prMonthInfo');
+      if (!grid) return;
 
-      var records  = data.records || [];
-      var summary  = data.summary || {};
+      var emps    = data.employees || [];
+      var summary = data.summary   || {};
       var monthLbl = (function() {
-        try {
-          var p = month.split('-');
-          return new Date(Number(p[0]), Number(p[1])-1, 1).toLocaleString('en-IN', { month: 'long', year: 'numeric' });
-        } catch(e2) { return month; }
+        try { var p=data.month.split('-'); return new Date(+p[0],+p[1]-1,1).toLocaleString('en-IN',{month:'long',year:'numeric'}); }
+        catch(e2){return data.month;}
       })();
 
-      // Status line
-      if (statusEl) statusEl.innerHTML = records.length
-        ? '<span style="color:var(--G);font-weight:700"><i class="fas fa-circle-check"></i> ' + records.length + ' record' + (records.length>1?'s':'') + ' for ' + monthLbl + '</span>'
-        : '<span style="color:var(--O);font-weight:700"><i class="fas fa-circle-exclamation"></i> No records for ' + monthLbl + ' — add employee salaries</span>';
+      if (info) info.innerHTML =
+        '<strong>' + emps.length + ' employees</strong> · ' + data.days_in_month + ' days · ' + _esc(monthLbl);
 
       // Summary strip
       if (strip) {
-        var paidTotal  = records.filter(function(r){return r.status==='Paid';}).reduce(function(s,r){return s+r.net_salary;},0);
-        var pendTotal  = records.filter(function(r){return r.status!=='Paid';}).reduce(function(s,r){return s+r.net_salary;},0);
-        var sumCards = [
-          { lbl:'Gross Payable', val:'₹'+_prFmt(summary.total_gross||0),      c:'var(--P)', ico:'fa-sack-dollar' },
-          { lbl:'Deductions',    val:'₹'+_prFmt(summary.total_deductions||0),  c:'var(--R)', ico:'fa-arrow-down-wide-short' },
-          { lbl:'Net Payable',   val:'₹'+_prFmt(summary.total_net||0),         c:'var(--G)', ico:'fa-wallet', bold:true },
-          { lbl:'Paid Out',      val:'₹'+_prFmt(paidTotal),                    c:'var(--G)', ico:'fa-circle-check' },
-          { lbl:'Yet to Pay',    val:'₹'+_prFmt(pendTotal),                    c:'var(--O)', ico:'fa-clock' },
-          { lbl:'Total Staff',   val:records.length,                            c:'var(--T)', ico:'fa-users' }
+        var noSalary = emps.filter(function(e){return e.basic_salary===0;}).length;
+        var cards = [
+          { lbl:'Total Gross',   val:'₹'+_prFmt(summary.total_gross),       c:'var(--P)', ico:'fa-sack-dollar' },
+          { lbl:'Deductions',    val:'₹'+_prFmt(summary.total_deductions),   c:'var(--R)', ico:'fa-arrow-down-wide-short' },
+          { lbl:'Net Payable',   val:'₹'+_prFmt(summary.total_net),          c:'var(--G)', ico:'fa-wallet', bold:true },
+          { lbl:'Employees',     val:emps.length,                             c:'var(--T)', ico:'fa-users' },
+          { lbl:'Salary Missing',val:noSalary,                               c: noSalary>0?'var(--O)':'var(--tx3)', ico:'fa-triangle-exclamation' }
         ];
-        strip.innerHTML = sumCards.map(function(c) {
+        strip.innerHTML = cards.map(function(c){
           return '<div class="card card-nohover" style="padding:12px 14px;border-left:3px solid '+c.c+'">' +
-            '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">' +
-            '<i class="fas '+c.ico+'" style="color:'+c.c+';font-size:14px"></i>' +
-            '<div style="font-size:10px;font-weight:800;color:var(--tx3);text-transform:uppercase">'+c.lbl+'</div>' +
-            '</div>' +
-            '<div style="font-size:'+(c.bold?'18':'15')+'px;font-weight:900;color:'+c.c+'">'+c.val+'</div>' +
+            '<div style="display:flex;align-items:center;gap:7px;margin-bottom:3px">' +
+            '<i class="fas '+c.ico+'" style="color:'+c.c+';font-size:13px"></i>' +
+            '<div style="font-size:10px;font-weight:800;color:var(--tx3);text-transform:uppercase">'+c.lbl+'</div></div>' +
+            '<div style="font-size:'+(c.bold?'17':'14')+'px;font-weight:900;color:'+c.c+'">'+c.val+'</div>' +
             '</div>';
         }).join('');
       }
 
-      if (!records.length) {
-        wrap.innerHTML =
-          '<div class="empty-state" style="padding:40px">' +
-          '<i class="fas fa-file-invoice-dollar" style="font-size:40px;color:var(--tx4)"></i>' +
-          '<h4 style="margin-top:12px">No Salary Records for ' + _esc(monthLbl) + '</h4>' +
-          '<p style="color:var(--tx3);margin-bottom:16px">Har employee ke liye salary record add karo using the <strong>Add Employee</strong> button.</p>' +
-          '<button class="btn" onclick="_prAddRow()"><i class="fas fa-plus"></i> Add Employee Salary</button>' +
-          '</div>';
+      if (!emps.length) {
+        grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1">' +
+          '<i class="fas fa-users-slash" style="font-size:40px;color:var(--tx4)"></i>' +
+          '<h4 style="margin-top:12px">No Employees Found</h4>' +
+          '<p>Selected department/month mein koi employee nahi hai ya NeedAttendance=No set hai.</p></div>';
         return;
       }
 
-      // Group by dept for better readability
-      var deptOrder = [];
-      var byDept = {};
-      records.forEach(function(r) {
-        var dept = r.dept || 'Other';
-        if (!byDept[dept]) { byDept[dept] = []; deptOrder.push(dept); }
-        byDept[dept].push(r);
-      });
-      deptOrder.sort();
+      // Employee cards — Employee Directory style
+      grid.innerHTML = emps.map(function(e) {
+        var hasSalary = e.basic_salary > 0;
+        var attPct    = e.total_working_days > 0
+          ? Math.round(e.payable_days / e.total_working_days * 100) : 0;
+        var pctColor  = attPct >= 90 ? 'var(--G)' : attPct >= 75 ? 'var(--O)' : 'var(--R)';
+        var lwpTag    = e.lwp_days > 0
+          ? '<span style="background:var(--Rl);color:var(--R);padding:1px 6px;border-radius:5px;font-size:9px;font-weight:800">LWP:'+e.lwp_days+'d</span>' : '';
 
-      var tableRows = '';
-      var grandGross = 0, grandDed = 0, grandNet = 0;
-      var deptSections = deptOrder.map(function(dept) {
-        var rows = byDept[dept];
-        var dGross = rows.reduce(function(s,r){return s+r.gross_salary;},0);
-        var dDed   = rows.reduce(function(s,r){return s+r.total_deductions;},0);
-        var dNet   = rows.reduce(function(s,r){return s+r.net_salary;},0);
-        grandGross += dGross; grandDed += dDed; grandNet += dNet;
+        return '<div class="card" style="padding:0;overflow:hidden;cursor:pointer;transition:transform .15s,box-shadow .15s" ' +
+          'onclick="_prOpenDetail(' + JSON.stringify(e.emp_id) + ')" ' +
+          'onmouseenter="this.style.transform=\'translateY(-2px)\';this.style.boxShadow=\'0 8px 24px rgba(0,0,0,.12)\'" ' +
+          'onmouseleave="this.style.transform=\'\';this.style.boxShadow=\'\'">' +
 
-        var rowsHtml = rows.map(function(r) {
-          var sClr = r.status==='Paid' ? 'var(--G)' : r.status==='On Hold' ? 'var(--O)' : 'var(--O)';
-          var sBg  = r.status==='Paid' ? 'var(--Gl)' : r.status==='On Hold' ? 'var(--Ol)' : 'var(--sur2)';
-          return '<tr>' +
-            '<td style="font-weight:700;font-size:13px">'+_esc(r.emp_name)+'</td>' +
-            '<td style="text-align:right;color:var(--tx2)">₹'+_prFmt(r.basic_salary)+'</td>' +
-            '<td style="text-align:right;color:var(--tx2)">₹'+_prFmt(r.hra)+'</td>' +
-            '<td style="text-align:right;color:var(--tx2)">₹'+_prFmt(r.conveyance)+'</td>' +
-            '<td style="text-align:right;color:var(--tx2)">₹'+_prFmt(r.other_allowances)+'</td>' +
-            '<td style="text-align:right;font-weight:700">₹'+_prFmt(r.gross_salary)+'</td>' +
-            '<td style="text-align:right;color:var(--R)">₹'+_prFmt(r.pf_deduction)+'</td>' +
-            '<td style="text-align:right;color:var(--R)">₹'+_prFmt(r.esi_deduction)+'</td>' +
-            '<td style="text-align:right;color:var(--R)">₹'+_prFmt(r.tds)+'</td>' +
-            '<td style="text-align:right;color:var(--R)">₹'+_prFmt(r.other_deductions)+'</td>' +
-            '<td style="text-align:right;color:var(--R);font-weight:700">₹'+_prFmt(r.total_deductions)+'</td>' +
-            '<td style="text-align:right;font-size:14px;font-weight:900;color:var(--G)">₹'+_prFmt(r.net_salary)+'</td>' +
-            '<td style="text-align:center">' +
-              '<span style="padding:3px 8px;border-radius:6px;font-size:10px;font-weight:800;background:'+sBg+';color:'+sClr+'">'+_esc(r.status)+'</span>' +
-            '</td>' +
-            '<td>' +
-              '<div style="display:flex;gap:4px">' +
-              '<button class="btn btn-xs btn-outline" ' +
-                'data-pid="'+_esc(r.payroll_id)+'" data-pname="'+_esc(r.emp_name)+'" ' +
-                'onclick="_prEditBtn(this)" title="Edit">' +
-                '<i class="fas fa-pencil"></i></button>' +
-              (r.status !== 'Paid' && _isOwner()
-                ? '<button class="btn btn-xs" style="background:var(--Gl);color:var(--G)" ' +
-                    'data-pid="'+_esc(r.payroll_id)+'" data-pname="'+_esc(r.emp_name)+'" ' +
-                    'onclick="_prPaidBtn(this)" title="Mark Paid">' +
-                    '<i class="fas fa-check"></i></button>'
-                : '') +
+          // Card top band
+          '<div style="height:5px;background:' + (hasSalary ? 'linear-gradient(90deg,var(--P),var(--T))' : 'var(--bdr)') + '"></div>' +
+
+          '<div style="padding:14px 16px">' +
+          // Avatar + name
+          '<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">' +
+          _avatarEl(e.emp_name, e.photo, 42) +
+          '<div style="flex:1;min-width:0">' +
+          '<div style="font-weight:800;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + _esc(e.emp_name) + '</div>' +
+          '<div style="font-size:11px;color:var(--tx3)">' + _esc(e.dept) + ' · ' + _esc(e.emp_id) + '</div>' +
+          '</div>' +
+          lwpTag +
+          '</div>' +
+
+          // Attendance bar
+          '<div style="margin-bottom:10px">' +
+          '<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--tx3);margin-bottom:3px">' +
+          '<span>Attendance</span><span style="font-weight:800;color:'+pctColor+'">' + attPct + '%</span></div>' +
+          '<div style="height:5px;background:var(--sur2);border-radius:4px;overflow:hidden">' +
+          '<div style="height:100%;width:'+attPct+'%;background:'+pctColor+';border-radius:4px;transition:width .4s"></div></div>' +
+          '<div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap">' +
+          '<span style="font-size:10px;color:var(--G)">✓ ' + e.payable_days + 'd paid</span>' +
+          (e.absent_days > 0 ? '<span style="font-size:10px;color:var(--R)">✗ ' + e.absent_days + 'd absent</span>' : '') +
+          (e.leave_days  > 0 ? '<span style="font-size:10px;color:var(--T)">⊘ ' + e.leave_days  + 'd leave</span>'  : '') +
+          '</div></div>' +
+
+          // Salary summary
+          (hasSalary
+            ? '<div style="background:var(--sur2);border-radius:8px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center">' +
+              '<div>' +
+              '<div style="font-size:10px;color:var(--tx3);text-transform:uppercase;font-weight:700">Gross</div>' +
+              '<div style="font-size:13px;font-weight:800;color:var(--tx)">₹' + _prFmt(e.gross_salary) + '</div>' +
               '</div>' +
-            '</td>' +
-            '</tr>';
-        }).join('');
-
-        return '<tr style="background:var(--sur2)"><td colspan="14" style="padding:8px 12px;font-size:11px;font-weight:800;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px">' +
-          '<i class="fas fa-building" style="margin-right:6px"></i>'+_esc(dept)+
-          ' &nbsp;<span style="font-weight:600;color:var(--tx3)">Gross: ₹'+_prFmt(dGross)+' | Ded: ₹'+_prFmt(dDed)+' | Net: ₹'+_prFmt(dNet)+'</span>' +
-          '</td></tr>' + rowsHtml;
+              '<div style="font-size:12px;color:var(--R)">-₹' + _prFmt(e.total_deductions) + '</div>' +
+              '<div style="text-align:right">' +
+              '<div style="font-size:10px;color:var(--tx3);text-transform:uppercase;font-weight:700">Net Pay</div>' +
+              '<div style="font-size:16px;font-weight:900;color:var(--G)">₹' + _prFmt(e.net_salary) + '</div>' +
+              '</div>' +
+              '</div>'
+            : '<div style="background:var(--Ol);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--O);font-weight:700">' +
+              '<i class="fas fa-triangle-exclamation"></i> Salary not configured in Doer List</div>'
+          ) +
+          '</div></div>';
       }).join('');
-
-      wrap.innerHTML =
-        '<div style="overflow-x:auto;border-radius:12px;border:1px solid var(--bdr)">' +
-        '<table style="width:100%;border-collapse:collapse;min-width:900px">' +
-        '<thead>' +
-        '<tr style="background:var(--P)">' +
-        '<th style="padding:10px 12px;text-align:left;color:#fff;font-size:11px;white-space:nowrap">Employee</th>' +
-        '<th style="padding:10px 8px;text-align:right;color:rgba(255,255,255,.8);font-size:10px;white-space:nowrap">Basic</th>' +
-        '<th style="padding:10px 8px;text-align:right;color:rgba(255,255,255,.8);font-size:10px;white-space:nowrap">HRA</th>' +
-        '<th style="padding:10px 8px;text-align:right;color:rgba(255,255,255,.8);font-size:10px;white-space:nowrap">Conv</th>' +
-        '<th style="padding:10px 8px;text-align:right;color:rgba(255,255,255,.8);font-size:10px;white-space:nowrap">Other Allow</th>' +
-        '<th style="padding:10px 8px;text-align:right;color:#fff;font-size:11px;font-weight:800;white-space:nowrap">Gross</th>' +
-        '<th style="padding:10px 8px;text-align:right;color:rgba(255,200,200,.9);font-size:10px;white-space:nowrap">PF</th>' +
-        '<th style="padding:10px 8px;text-align:right;color:rgba(255,200,200,.9);font-size:10px;white-space:nowrap">ESI</th>' +
-        '<th style="padding:10px 8px;text-align:right;color:rgba(255,200,200,.9);font-size:10px;white-space:nowrap">TDS</th>' +
-        '<th style="padding:10px 8px;text-align:right;color:rgba(255,200,200,.9);font-size:10px;white-space:nowrap">Other Ded</th>' +
-        '<th style="padding:10px 8px;text-align:right;color:rgba(255,200,200,.9);font-size:11px;font-weight:800;white-space:nowrap">Tot Ded</th>' +
-        '<th style="padding:10px 8px;text-align:right;color:#a8f0c8;font-size:12px;font-weight:900;white-space:nowrap">Net Pay</th>' +
-        '<th style="padding:10px 8px;text-align:center;color:rgba(255,255,255,.8);font-size:10px;white-space:nowrap">Status</th>' +
-        '<th style="padding:10px 8px;color:rgba(255,255,255,.6);font-size:10px"></th>' +
-        '</tr>' +
-        '<tr style="background:var(--Pl)">' +
-        '<td style="padding:6px 12px;font-size:11px;font-weight:700;color:var(--P)">GRAND TOTAL</td>' +
-        '<td colspan="4"></td>' +
-        '<td style="text-align:right;font-size:12px;font-weight:900;color:var(--P)">₹'+_prFmt(grandGross)+'</td>' +
-        '<td colspan="4"></td>' +
-        '<td style="text-align:right;font-size:12px;font-weight:900;color:var(--R)">₹'+_prFmt(grandDed)+'</td>' +
-        '<td style="text-align:right;font-size:13px;font-weight:900;color:var(--G)">₹'+_prFmt(grandNet)+'</td>' +
-        '<td colspan="2"></td>' +
-        '</tr>' +
-        '</thead>' +
-        '<tbody style="font-size:13px">' +
-        deptSections +
-        '</tbody>' +
-        '</table>' +
-        '</div>' +
-        '<div style="margin-top:10px;font-size:11px;color:var(--tx3);text-align:right">' +
-        monthLbl + ' salary sheet &nbsp;·&nbsp; ' + records.length + ' employees &nbsp;·&nbsp; ' +
-        '<button class="btn btn-xs btn-outline" onclick="_prExportCSV()"><i class="fas fa-file-csv"></i> Download CSV</button>' +
-        '</div>';
     }
 
-    // Add new employee salary record for a month
-    function _prAddRow() {
-      if (!_isManager()) return;
-      var month = (document.getElementById('prMonthSel') || {}).value || _currMonth();
-      var monthLbl = (function() {
-        try { var p=month.split('-'); return new Date(Number(p[0]),Number(p[1])-1,1).toLocaleString('en-IN',{month:'long',year:'numeric'}); } catch(e){return month;}
+    function _prOpenDetail(empId) {
+      if (!_prData) return;
+      var emp = null;
+      (_prData.employees || []).forEach(function(e){ if (e.emp_id === empId) emp = e; });
+      if (!emp) return;
+
+      var monthLbl = (function(){
+        try{var p=_prData.month.split('-');return new Date(+p[0],+p[1]-1,1).toLocaleString('en-IN',{month:'long',year:'numeric'});}
+        catch(e2){return _prData.month;}
       })();
 
-      function numField(lbl, id, ph) {
-        return '<div>' +
-          '<label style="font-size:10px;font-weight:800;color:var(--tx2);text-transform:uppercase;display:block;margin-bottom:3px">'+lbl+'</label>' +
-          '<input type="number" id="'+id+'" class="ana-sel" placeholder="'+(ph||'0')+'" oninput="_prCalcNet()" style="width:100%;font-size:13px"></div>';
+      // Build day-wise calendar
+      var log = emp.daily_log || [];
+      var statusColor = { P:'var(--G)', HD:'var(--T)', A:'var(--R)', WO:'var(--tx3)', H:'var(--V)', LWP:'var(--R)',
+                          CL:'var(--P)', SL:'var(--P)', PL:'var(--P)' };
+      var statusLabel = { P:'P', HD:'HD', A:'A', WO:'WO', H:'H', LWP:'LWP', CL:'CL', SL:'SL', PL:'PL' };
+      var calHtml =
+        '<div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;font-size:10px;text-align:center;margin-bottom:12px">' +
+        ['S','M','T','W','T','F','S'].map(function(h){
+          return '<div style="font-weight:800;color:var(--tx3);padding:4px 0">'+h+'</div>';
+        }).join('');
+
+      // Fill blank cells before first day
+      var firstDow = log.length ? new Date(log[0].date + 'T00:00:00').getDay() : 0;
+      for (var b = 0; b < firstDow; b++) calHtml += '<div></div>';
+
+      log.forEach(function(day) {
+        var dt   = day.date.split('-')[2]; // day number
+        var clr  = statusColor[day.status] || 'var(--tx3)';
+        var bg   = day.status === 'P' ? 'var(--Gl)' : day.status === 'HD' ? 'var(--Tl)' :
+                   day.status === 'A' || day.status === 'LWP' ? 'var(--Rl)' :
+                   day.status === 'WO' || day.status === 'H' ? 'var(--sur2)' : 'var(--Pl)';
+        var lbl  = statusLabel[day.status] || day.status;
+        calHtml += '<div style="padding:4px 2px;border-radius:5px;background:'+bg+';color:'+clr+';font-weight:700">' +
+          '<div style="font-size:9px;color:var(--tx3)">'+dt+'</div>' +
+          '<div>'+lbl+'</div></div>';
+      });
+      calHtml += '</div>';
+
+      // Salary breakdown
+      function brow(lbl, val, clr) {
+        return '<tr><td style="padding:6px 10px;color:var(--tx2);font-size:12px">'+lbl+'</td>' +
+          '<td style="padding:6px 10px;font-weight:700;text-align:right;color:'+(clr||'var(--tx)')+';font-size:12px">₹'+_prFmt(val)+'</td></tr>';
       }
 
-      var body =
-        '<div style="display:flex;flex-direction:column;gap:10px">' +
+      var salaryHtml =
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">' +
+        '<div><div style="font-size:10px;font-weight:800;color:var(--G);text-transform:uppercase;margin-bottom:6px">Earnings</div>' +
+        '<table style="width:100%;border-collapse:collapse">' +
+        brow('Basic Salary', emp.basic_salary) +
+        brow('HRA', emp.hra) +
+        brow('Conveyance', emp.conveyance) +
+        brow('Other Allowances', emp.other_allowances) +
+        '<tr style="border-top:2px solid var(--bdr)">' +
+        '<td style="padding:6px 10px;font-weight:800;font-size:12px">Gross</td>' +
+        '<td style="padding:6px 10px;font-weight:900;text-align:right;color:var(--P);font-size:14px">₹'+_prFmt(emp.gross_salary)+'</td></tr>' +
+        '</table></div>' +
+        '<div><div style="font-size:10px;font-weight:800;color:var(--R);text-transform:uppercase;margin-bottom:6px">Deductions</div>' +
+        '<table style="width:100%;border-collapse:collapse">' +
+        brow('PF', emp.pf_deduction, 'var(--R)') +
+        brow('ESI', emp.esi_deduction, 'var(--R)') +
+        brow('TDS', emp.tds, 'var(--R)') +
+        brow('Other', emp.other_deductions, 'var(--R)') +
+        brow('LWP (' + emp.lwp_days + 'd × ₹'+_prFmt(emp.per_day_salary)+')', emp.lwp_deduction, 'var(--R)') +
+        '<tr style="border-top:2px solid var(--bdr)">' +
+        '<td style="padding:6px 10px;font-weight:800;font-size:12px">Total Ded.</td>' +
+        '<td style="padding:6px 10px;font-weight:900;text-align:right;color:var(--R);font-size:14px">₹'+_prFmt(emp.total_deductions)+'</td></tr>' +
+        '</table></div></div>';
 
-        '<div style="background:var(--Pl);border-radius:8px;padding:8px 12px;font-size:12px;color:var(--P);font-weight:700">' +
-        '<i class="fas fa-calendar-alt"></i> Adding salary for: ' + _esc(monthLbl) + '</div>' +
+      // Attendance stats row
+      var attStatsHtml =
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:8px;margin-bottom:14px">' +
+        [
+          { lbl:'Working Days', val:emp.total_working_days, c:'var(--tx)' },
+          { lbl:'Present',      val:emp.present_days,       c:'var(--G)' },
+          { lbl:'Paid Leave',   val:emp.leave_days,         c:'var(--T)' },
+          { lbl:'Absent/LWP',   val:(emp.absent_days+emp.lwp_days), c:'var(--R)' },
+          { lbl:'Payable Days', val:emp.payable_days,       c:'var(--P)' }
+        ].map(function(s){
+          return '<div style="background:var(--sur2);border-radius:8px;padding:8px;text-align:center">' +
+            '<div style="font-size:16px;font-weight:900;color:'+s.c+'">'+s.val+'</div>' +
+            '<div style="font-size:9px;color:var(--tx3);text-transform:uppercase;font-weight:700">'+s.lbl+'</div></div>';
+        }).join('') + '</div>';
 
-        '<div><label style="font-size:10px;font-weight:800;color:var(--tx2);text-transform:uppercase;display:block;margin-bottom:3px">Employee <span style="color:var(--R)">*</span></label>' +
-        '<select id="prEmpSel" class="ana-sel" style="width:100%" onchange="_prAutoFill()">' +
-        '<option value="">— Select —</option>' + _getEmpOptions() + '</select></div>' +
-
-        '<div style="font-size:10px;font-weight:800;color:var(--G);text-transform:uppercase;padding-top:2px;border-top:1px solid var(--bdr);margin-top:2px">Earnings</div>' +
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
-        numField('Basic Salary ₹', 'prBasic', '15000') +
-        numField('HRA ₹', 'prHra', '3000') +
-        numField('Conveyance ₹', 'prConv', '1600') +
-        numField('Other Allow ₹', 'prOtherAllow', '0') +
-        '</div>' +
-
-        '<div style="font-size:10px;font-weight:800;color:var(--R);text-transform:uppercase;padding-top:2px;border-top:1px solid var(--bdr);margin-top:2px">Deductions</div>' +
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
-        numField('PF ₹', 'prPf', '1800') +
-        numField('ESI ₹', 'prEsi', '0') +
-        numField('TDS ₹', 'prTds', '0') +
-        numField('Other Ded ₹', 'prOtherDed', '0') +
-        '</div>' +
-
-        '<div style="background:var(--sur2);border-radius:10px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;border:1.5px solid var(--bdr)">' +
-        '<div>' +
-        '<div style="font-size:11px;font-weight:700;color:var(--tx3)">Gross: <span id="prNetGross" style="color:var(--P);font-weight:800">₹0</span></div>' +
-        '<div style="font-size:11px;font-weight:700;color:var(--tx3);margin-top:2px">Deductions: <span id="prNetDed" style="color:var(--R);font-weight:800">₹0</span></div>' +
-        '</div>' +
-        '<div style="text-align:right">' +
-        '<div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase">Net Pay</div>' +
-        '<div id="prNetAmt" style="font-size:22px;font-weight:900;color:var(--G)">₹0</div>' +
-        '</div>' +
-        '</div>' +
-
-        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
-        '<div><label style="font-size:10px;font-weight:800;color:var(--tx2);text-transform:uppercase;display:block;margin-bottom:3px">Payment Mode</label>' +
-        '<select id="prMode" class="ana-sel" style="width:100%">' +
-        '<option>Bank Transfer</option><option>Cash</option><option>Cheque</option><option>UPI</option>' +
-        '</select></div>' +
-        '<div><label style="font-size:10px;font-weight:800;color:var(--tx2);text-transform:uppercase;display:block;margin-bottom:3px">Status</label>' +
-        '<select id="prSts" class="ana-sel" style="width:100%">' +
-        '<option value="Pending">Pending</option><option value="Paid">Paid</option><option value="On Hold">On Hold</option>' +
-        '</select></div>' +
-        '</div>' +
-
-        '<div><label style="font-size:10px;font-weight:800;color:var(--tx2);text-transform:uppercase;display:block;margin-bottom:3px">Remarks</label>' +
-        '<input type="text" id="prRemarks" class="ana-sel" placeholder="Optional note" style="width:100%"></div>' +
-
-        '</div>';
-
-      _openModal('<i class="fas fa-plus-circle" style="color:var(--P)"></i> Add Salary Record', body,
-        function() { _prSaveNew(); }, '<i class="fas fa-floppy-disk"></i> Save');
-
-      // Live calc on open
-      setTimeout(function() { _prCalcNet(); }, 100);
-    }
-
-    function _prCalcNet() {
-      var g = (Number((document.getElementById('prBasic')||{}).value||0)) +
-              (Number((document.getElementById('prHra')||{}).value||0)) +
-              (Number((document.getElementById('prConv')||{}).value||0)) +
-              (Number((document.getElementById('prOtherAllow')||{}).value||0));
-      var d = (Number((document.getElementById('prPf')||{}).value||0)) +
-              (Number((document.getElementById('prEsi')||{}).value||0)) +
-              (Number((document.getElementById('prTds')||{}).value||0)) +
-              (Number((document.getElementById('prOtherDed')||{}).value||0));
-      var gEl=document.getElementById('prNetGross'), dEl=document.getElementById('prNetDed'), nEl=document.getElementById('prNetAmt');
-      if (gEl) gEl.textContent = '₹'+_prFmt(g);
-      if (dEl) dEl.textContent = '₹'+_prFmt(d);
-      if (nEl) nEl.textContent = '₹'+_prFmt(g-d);
-    }
-
-    function _prAutoFill() {
-      // Can be extended to pull last month's salary as default
-    }
-
-    function _prSaveNew() {
-      var empSel  = document.getElementById('prEmpSel');
-      var empId   = empSel ? empSel.value : '';
-      var empName = empSel && empSel.selectedIndex >= 0 ? empSel.options[empSel.selectedIndex].text.split(' (')[0] : '';
-      var month   = (document.getElementById('prMonthSel') || {}).value || _currMonth();
-      if (!empId) { _toast('Employee select karo', 'warn'); return; }
-
-      var dept = '';
-      (_D.doerList || _D.doers || []).forEach(function(d) {
-        if ((d.emp_id || d.user_id) === empId) dept = d.department || d.dept || '';
-      });
-
-      var basic = Number((document.getElementById('prBasic')||{}).value||0);
-      var hra   = Number((document.getElementById('prHra')||{}).value||0);
-      var conv  = Number((document.getElementById('prConv')||{}).value||0);
-      var oAll  = Number((document.getElementById('prOtherAllow')||{}).value||0);
-      var pf    = Number((document.getElementById('prPf')||{}).value||0);
-      var esi   = Number((document.getElementById('prEsi')||{}).value||0);
-      var tds   = Number((document.getElementById('prTds')||{}).value||0);
-      var oDed  = Number((document.getElementById('prOtherDed')||{}).value||0);
-      var gross = basic + hra + conv + oAll;
-      var totDed= pf + esi + tds + oDed;
-
-      var payload = {
-        emp_id: empId, emp_name: empName, dept: dept, month: month,
-        basic_salary: basic, hra: hra, conveyance: conv, other_allowances: oAll,
-        gross_salary: gross,
-        pf_deduction: pf, esi_deduction: esi, tds: tds, other_deductions: oDed,
-        total_deductions: totDed, net_salary: gross - totDed,
-        payment_mode: (document.getElementById('prMode')||{}).value || 'Bank Transfer',
-        status:       (document.getElementById('prSts')||{}).value  || 'Pending',
-        remarks:      (document.getElementById('prRemarks')||{}).value || ''
-      };
-
-      _gas('savePayroll', [payload], function(r) {
-        _closeModal();
-        _toast('✅ Salary record saved!', 'ok');
-        _prLoad();
-      }, function(e) { _toast('Error: ' + e.message, 'err'); });
-    }
-
-    function _prEditBtn(btn) {
-      var pid   = btn.getAttribute('data-pid')   || '';
-      var pname = btn.getAttribute('data-pname') || '';
-      _prEdit(pid, pname);
-    }
-
-    function _prPaidBtn(btn) {
-      var pid   = btn.getAttribute('data-pid')   || '';
-      var pname = btn.getAttribute('data-pname') || '';
-      _prMarkPaid(pid, pname);
-    }
-
-    // Edit existing record — opens same form pre-filled
-    function _prEdit(payrollId, empName) {
-      _gas('getPayroll', [{ month: 'all', emp_id: 'all', dept: 'all', status: 'all' }], function(data) {
-        var r = null;
-        (data.records || []).forEach(function(rec) { if (rec.payroll_id === payrollId) r = rec; });
-        if (!r) { _toast('Record not found', 'err'); return; }
-
-        function numF(lbl, id, val) {
-          return '<div>' +
-            '<label style="font-size:10px;font-weight:800;color:var(--tx2);text-transform:uppercase;display:block;margin-bottom:3px">'+lbl+'</label>' +
-            '<input type="number" id="'+id+'" class="ana-sel" value="'+val+'" oninput="_prCalcNetEdit()" style="width:100%;font-size:13px"></div>';
-        }
-
-        var body =
-          '<div style="font-size:12px;font-weight:700;color:var(--tx2);margin-bottom:10px">' +
-          '<i class="fas fa-user"></i> ' + _esc(r.emp_name) + ' &nbsp;·&nbsp; ' + _esc(r.month) + '</div>' +
-          '<div style="display:flex;flex-direction:column;gap:10px">' +
-          '<div style="font-size:10px;font-weight:800;color:var(--G);text-transform:uppercase">Earnings</div>' +
-          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
-          numF('Basic ₹','peBasic',r.basic_salary) + numF('HRA ₹','peHra',r.hra) +
-          numF('Conv ₹','peConv',r.conveyance) + numF('Other Allow ₹','peOA',r.other_allowances) +
-          '</div>' +
-          '<div style="font-size:10px;font-weight:800;color:var(--R);text-transform:uppercase;border-top:1px solid var(--bdr);padding-top:6px">Deductions</div>' +
-          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
-          numF('PF ₹','pePf',r.pf_deduction) + numF('ESI ₹','peEsi',r.esi_deduction) +
-          numF('TDS ₹','peTds',r.tds) + numF('Other Ded ₹','peOD',r.other_deductions) +
-          '</div>' +
-          '<div style="background:var(--sur2);border-radius:8px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;border:1px solid var(--bdr)">' +
-          '<div style="font-size:11px;color:var(--tx3)">Net Pay</div>' +
-          '<div id="peNetAmt" style="font-size:20px;font-weight:900;color:var(--G)">₹'+_prFmt(r.net_salary)+'</div>' +
-          '</div>' +
-          '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">' +
-          '<div><label style="font-size:10px;font-weight:800;color:var(--tx2);text-transform:uppercase;display:block;margin-bottom:3px">Payment Mode</label>' +
-          '<select id="peMode" class="ana-sel" style="width:100%">' +
-          ['Bank Transfer','Cash','Cheque','UPI'].map(function(m){return '<option'+(m===r.payment_mode?' selected':'')+'>'+m+'</option>';}).join('') +
-          '</select></div>' +
-          '<div><label style="font-size:10px;font-weight:800;color:var(--tx2);text-transform:uppercase;display:block;margin-bottom:3px">Status</label>' +
-          '<select id="peSts" class="ana-sel" style="width:100%">' +
-          ['Pending','Paid','On Hold'].map(function(s){return '<option value="'+s+'"'+(s===r.status?' selected':'')+'>'+s+'</option>';}).join('') +
-          '</select></div>' +
-          '</div>' +
-          '<div><label style="font-size:10px;font-weight:800;color:var(--tx2);text-transform:uppercase;display:block;margin-bottom:3px">Remarks</label>' +
-          '<input type="text" id="peRemarks" class="ana-sel" value="'+_esc(r.remarks||'')+'" style="width:100%"></div>' +
-          '</div>';
-
-        _openModal('<i class="fas fa-pencil" style="color:var(--P)"></i> Edit: ' + _esc(empName), body,
-          function() {
-            var basic=Number((document.getElementById('peBasic')||{}).value||0);
-            var hra=Number((document.getElementById('peHra')||{}).value||0);
-            var conv=Number((document.getElementById('peConv')||{}).value||0);
-            var oAll=Number((document.getElementById('peOA')||{}).value||0);
-            var pf=Number((document.getElementById('pePf')||{}).value||0);
-            var esi=Number((document.getElementById('peEsi')||{}).value||0);
-            var tds=Number((document.getElementById('peTds')||{}).value||0);
-            var oDed=Number((document.getElementById('peOD')||{}).value||0);
-            var gross=basic+hra+conv+oAll; var totDed=pf+esi+tds+oDed;
-            var updates = {
-              emp_id: r.emp_id, emp_name: r.emp_name, dept: r.dept, month: r.month,
-              basic_salary:basic, hra:hra, conveyance:conv, other_allowances:oAll,
-              gross_salary:gross, pf_deduction:pf, esi_deduction:esi, tds:tds, other_deductions:oDed,
-              total_deductions:totDed, net_salary:gross-totDed,
-              payment_mode:(document.getElementById('peMode')||{}).value||r.payment_mode,
-              status:(document.getElementById('peSts')||{}).value||r.status,
-              remarks:(document.getElementById('peRemarks')||{}).value||''
-            };
-            _gas('savePayroll',[updates],function(){
-              _closeModal(); _toast('✅ Updated!','ok'); _prLoad();
-            },function(e){_toast('Error: '+e.message,'err');});
-          }, '<i class="fas fa-floppy-disk"></i> Update');
-
-        setTimeout(function(){_prCalcNetEdit();},100);
-      }, function(e){_toast('Error: '+e.message,'err');});
-    }
-
-    function _prCalcNetEdit() {
-      var g=(Number((document.getElementById('peBasic')||{}).value||0)) +
-            (Number((document.getElementById('peHra')||{}).value||0)) +
-            (Number((document.getElementById('peConv')||{}).value||0)) +
-            (Number((document.getElementById('peOA')||{}).value||0));
-      var d=(Number((document.getElementById('pePf')||{}).value||0)) +
-            (Number((document.getElementById('peEsi')||{}).value||0)) +
-            (Number((document.getElementById('peTds')||{}).value||0)) +
-            (Number((document.getElementById('peOD')||{}).value||0));
-      var el=document.getElementById('peNetAmt');
-      if(el) el.textContent='₹'+_prFmt(g-d);
-    }
-
-    function _prMarkPaid(payrollId, empName) {
       _openModal(
-        '<i class="fas fa-circle-check" style="color:var(--G)"></i> Mark as Paid',
-        '<p style="font-size:14px;color:var(--tx2);line-height:1.6">Mark <strong>' + _esc(empName) + '</strong>\u2019s salary as <strong style="color:var(--G)">Paid</strong>?</p>',
-        function() {
-          _closeModal();
-          _gas('updatePayrollStatus', [payrollId, 'Paid'], function() {
-            _toast('✅ Marked as Paid', 'ok'); _prLoad();
-          }, function(e) { _toast('Error: ' + e.message, 'err'); });
-        }, '<i class="fas fa-check"></i> Confirm Paid'
+        _avatarEl(emp.emp_name, emp.photo, 30) +
+        '<span style="margin-left:10px">' + _esc(emp.emp_name) + ' — ' + _esc(monthLbl) + '</span>',
+        '<div style="font-size:11px;color:var(--tx3);margin-bottom:12px">' + _esc(emp.dept) + ' · ' + _esc(emp.emp_id) + '</div>' +
+        attStatsHtml +
+        calHtml +
+        salaryHtml +
+        '<div style="background:linear-gradient(135deg,var(--Pl),var(--Gl));border-radius:10px;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;border:2px solid var(--G)">' +
+        '<div style="font-size:13px;font-weight:800;color:var(--tx2)">Net Salary Payable</div>' +
+        '<div style="font-size:26px;font-weight:900;color:var(--G)">₹' + _prFmt(emp.net_salary) + '</div>' +
+        '</div>'
       );
     }
 
     function _prExportCSV() {
-      var month = (document.getElementById('prMonthSel') || {}).value || _currMonth();
-      _gas('getPayroll', [{ month: month, emp_id: 'all', dept: 'all', status: 'all' }], function(data) {
-        var records = data.records || [];
-        var head = ['Emp ID','Name','Dept','Month','Basic','HRA','Conv','Other Allow','Gross','PF','ESI','TDS','Other Ded','Total Ded','Net Pay','Mode','Status','Remarks'];
-        var rows = [head].concat(records.map(function(r) {
-          return ['"'+r.emp_id+'"','"'+r.emp_name+'"','"'+r.dept+'"',r.month,
-            r.basic_salary,r.hra,r.conveyance,r.other_allowances,r.gross_salary,
-            r.pf_deduction,r.esi_deduction,r.tds,r.other_deductions,r.total_deductions,r.net_salary,
-            '"'+r.payment_mode+'"',r.status,'"'+(r.remarks||'')+'"'];
-        }));
-        var csv = rows.map(function(r){return r.join(',');}).join('\n');
-        var a = document.createElement('a');
-        a.href = 'data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
-        a.download = 'payroll_'+month+'_'+_today()+'.csv'; a.click();
-        _toast('Exported!','ok');
-      }, function(e){_toast('Error: '+e.message,'err');});
+      if (!_prData || !_prData.employees) return;
+      var head = ['Emp ID','Name','Dept','Month','Working Days','Present','Leave','Absent/LWP',
+                  'Basic','HRA','Conv','Other Allow','Gross','PF','ESI','TDS','Other Ded','LWP Ded','Total Ded','Net Pay'];
+      var rows = [head].concat((_prData.employees).map(function(e){
+        return ['"'+e.emp_id+'"','"'+e.emp_name+'"','"'+e.dept+'"',_prData.month,
+                e.total_working_days, e.present_days, e.leave_days, (e.absent_days+e.lwp_days),
+                e.basic_salary, e.hra, e.conveyance, e.other_allowances, e.gross_salary,
+                e.pf_deduction, e.esi_deduction, e.tds, e.other_deductions, e.lwp_deduction,
+                e.total_deductions, e.net_salary];
+      }));
+      var csv = rows.map(function(r){return r.join(',');}).join('\n');
+      var a = document.createElement('a');
+      a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
+      a.download = 'payroll_' + (_prData.month || _currMonth()) + '.csv';
+      a.click();
+      _toast('Exported!', 'ok');
     }
 
     /* ══════════════════════════════════════════════════════════════════════

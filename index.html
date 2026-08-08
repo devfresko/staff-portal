@@ -11068,8 +11068,10 @@ function _loadSetupTasks() {
     }
     if (taskInp) taskInp.value = '';
     if (startInp) startInp.value = _today();
-    if (timeInp) timeInp.value = '';   // clear — next task must pick own time
+    if (timeInp) timeInp.value = '';
     document.getElementById('csFreqX').innerHTML = '';
+    // Force fresh load of Active Tasks (bypass cache)
+    _D.deptTasks = null;
     _loadSetupTasks();
   } else {
     _endSub('btnSaveTask');

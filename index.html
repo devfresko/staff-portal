@@ -19,6 +19,8 @@
     href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap"
     rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
+  <!-- ── App Config: GAS_URL aur constants — sirf yahan change karo ── -->
+  <script src="appconfig.js"></script>
   <!-- Early session check: prevents login screen flash when valid session exists -->
   <script>
     (function(){
@@ -7623,28 +7625,61 @@
       d.setDate(d.getDate() + n);
       return d.toISOString().slice(0, 10);
     }
+    // ── Universal date/time normalizer ─────────────────────────────────────
+    // Handles: "2026-08-10", ISO "2026-08-10T14:30:00", "dd/MM/yyyy HH:mm:ss",
+    //          "Apr 01 2026 00:00:00 GMT+0530 (India Standard Time)",
+    //          "Mon Apr 01 2026 00:00:00 GMT+0530", raw JS Date.toString()
+    function _parseAnyDate(s) {
+      if (!s) return null;
+      var str = String(s).trim();
+      if (!str || str === '-' || str === 'undefined' || str === 'null') return null;
+
+      // Raw JS Date.toString(): "Apr 01 2026 00:00:00 GMT+0530..." or "Mon Apr 01 2026..."
+      var gmtMatch = str.match(/([A-Za-z]{3})\s+(\d{1,2})\s+(\d{4})\s+(\d{2}:\d{2}:\d{2})/);
+      if (gmtMatch) {
+        var mo={Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+        var d = new Date(parseInt(gmtMatch[3]), mo[gmtMatch[1]], parseInt(gmtMatch[2]));
+        var tp = gmtMatch[4].split(':');
+        d.setHours(parseInt(tp[0]), parseInt(tp[1]), parseInt(tp[2]));
+        return isNaN(d.getTime()) ? null : d;
+      }
+
+      // dd/MM/yyyy HH:mm:ss (AppSheet / GAS format)
+      var ddmm = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{2}:\d{2})(?::\d{2})?)?/);
+      if (ddmm) {
+        var d2 = new Date(parseInt(ddmm[3]), parseInt(ddmm[2])-1, parseInt(ddmm[1]));
+        if (ddmm[4]) { var t2=ddmm[4].split(':'); d2.setHours(parseInt(t2[0]),parseInt(t2[1])); }
+        return isNaN(d2.getTime()) ? null : d2;
+      }
+
+      // ISO / other standard formats
+      var normalized = str.length === 10 ? str + 'T00:00:00' : str.replace(' ','T');
+      var d3 = new Date(normalized);
+      return isNaN(d3.getTime()) ? null : d3;
+    }
+
     function _fmtDate(s) {
       if (!s || s === '-' || s === 'undefined' || s === 'null') return '—';
       try {
-        var d = new Date(String(s).length === 10 ? s + 'T00:00:00' : s);
-        if (isNaN(d.getTime())) return s;
+        var d = _parseAnyDate(s);
+        if (!d) return String(s).substring(0, 16);
         return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
       } catch (e) { return s; }
     }
     function _fmtDateShort(s) {
       if (!s || s === '-') return '—';
       try {
-        var d = new Date(String(s).length === 10 ? s + 'T00:00:00' : s);
-        if (isNaN(d.getTime())) return s;
+        var d = _parseAnyDate(s);
+        if (!d) return String(s).substring(0, 10);
         return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
       } catch (e) { return s; }
     }
     function _fmtDateTime(s) {
       if (!s || s === '-') return '—';
       try {
-        var d = new Date(String(s).replace(' ', 'T'));
-        if (isNaN(d.getTime())) return s;
-        return d.toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+        var d = _parseAnyDate(s);
+        if (!d) return String(s).substring(0, 16);
+        return d.toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true });
       } catch (e) { return s; }
     }
     function _fmtTimestamp(s) {
@@ -8280,7 +8315,8 @@
        JSONP was failing: /exec redirects to echo endpoint (302)
        fetch POST works correctly with GAS doPost
     ══════════════════════════════════════════════════════════ */
-    var GAS_URL = 'https://script.google.com/macros/s/AKfycbxr8ZHMyfqvGkysBUxGEi3jeK0-HN5SFCUlafWm1cMUdp031-JM_9vRJ1i5rmV_l0Q/exec';
+    // GAS_URL appconfig.js se aa raha hai — wahan change karo
+    var GAS_URL = window.GAS_URL || '';
     var _TOKEN  = '';
 
     var _gasActive = 0; // count of concurrent GAS calls in flight
@@ -10025,11 +10061,22 @@ function _gasX(fn, args, timeout, onOk, onErr) {
                 (transFmt ? '<span style="color:var(--tx3)">' + transFmt + '</span>' : '') +
                 (t.transfer_reason ? '<span style="color:var(--tx3);font-style:italic">"' + _esc(t.transfer_reason) + '"</span>' : '')
               : isDone
-                ? '<span style="color:var(--G);font-weight:700"><i class="fas fa-circle-check"></i> Done</span>' +
-                  (actualFmt ? '<span style="color:var(--tx3)">· ' + actualFmt + '</span>' : '') +
-                  (t.remark ? '<span style="padding:1px 6px;border-radius:6px;background:var(--Il);color:var(--I);font-size:10px;font-weight:600"><i class="fas fa-comment-dots"></i> '+_esc(t.remark)+'</span>' : '')
+                ? '<span style="color:var(--G);font-weight:700"><i class="fas fa-circle-check"></i> Done</span>'
                 : '<span style="color:var(--R);font-weight:700"><i class="fas fa-circle-xmark"></i> Pending</span>'
             ) +
+            // ── Fix 5: Plan vs Actual time with clear headers ─────────────────
+            (planFmt || actualFmt
+              ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:1px 7px;border-radius:6px;background:var(--Pl);color:var(--P);font-weight:700;font-size:10px">' +
+                '<i class="fas fa-calendar-clock" style="font-size:9px"></i> Plan: <strong>' + _esc(planFmt||'—') + '</strong></span>'
+              : '') +
+            (actualFmt
+              ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:1px 7px;border-radius:6px;background:var(--Gl);color:var(--G);font-weight:700;font-size:10px">' +
+                '<i class="fas fa-check-circle" style="font-size:9px"></i> Actual: <strong>' + actualFmt + '</strong></span>'
+              : (isDone && planFmt
+                ? '<span style="padding:1px 7px;border-radius:6px;background:var(--Gl);color:var(--G);font-size:10px;font-weight:700"><i class="fas fa-check-circle"></i> Actual: recorded</span>'
+                : (planFmt ? '<span style="padding:1px 7px;border-radius:6px;background:var(--sur3);color:var(--tx3);font-size:10px">Actual: pending</span>' : ''))) +
+            // ── Fix 4: Remark — show everywhere (Done + Pending) ─────────────
+            (t.remark ? '<span style="padding:1px 7px;border-radius:6px;background:var(--Il);color:var(--I);font-size:10px;font-weight:600"><i class="fas fa-comment-dots"></i> '+_esc(t.remark)+'</span>' : '') +
             '</div></div>' +
             (isDone || isTransOut ? '' :
               '<div class="cmt-actions" style="display:flex;gap:5px;align-items:center;flex-shrink:0">' +
@@ -10483,16 +10530,22 @@ function _gasX(fn, args, timeout, onOk, onErr) {
           '<button class="btn btn-outline btn-xs" onclick="_exportHistory()"><i class="fas fa-download"></i> Export CSV</button>' +
           '</div>' +
           '<div class="table-card"><div class="tw"><table><thead><tr>' +
-          '<th>Date</th><th>Task</th><th>Freq</th><th>Status</th><th>Completed On</th><th>Remark</th>' +
+          '<th>Plan Date</th><th>Task</th><th>Freq</th><th>Status</th>' +
+          '<th style="color:var(--P)"><i class="fas fa-calendar-clock"></i> Plan Time</th>' +
+          '<th style="color:var(--G)"><i class="fas fa-check-circle"></i> Actual Time</th>' +
+          '<th>Remark</th>' +
           '</tr></thead><tbody>' +
           filtered.map(function(l) {
-            var isDone = l.computed_status === 'Done';
+            var isDone   = l.computed_status === 'Done';
+            var planTime = l.scheduled_time || '';
+            var actTime  = isDone && l.actual_dt ? _tsShort(l.actual_dt) : '';
             return '<tr>' +
               '<td style="font-weight:700">' + _fmtDate(l.date) + '</td>' +
               '<td>' + _esc(l.task_name) + '</td>' +
               '<td>' + _freqBadge(l.frequency) + '</td>' +
               '<td>' + _statusBadge(isDone ? 'Done' : 'Pending') + '</td>' +
-              '<td style="color:var(--G);font-weight:600">' + (isDone ? _fmtDate(l.actual_dt) : '—') + '</td>' +
+              '<td style="color:var(--P);font-weight:600">' + (planTime ? '<i class="fas fa-calendar-clock"></i> ' + _esc(planTime) : '<span style="color:var(--tx3)">—</span>') + '</td>' +
+              '<td style="color:var(--G);font-weight:600">' + (actTime ? '<i class="fas fa-check-circle"></i> ' + actTime : '<span style="color:var(--tx3)">—</span>') + '</td>' +
               '<td style="color:var(--I);font-size:12px">' + (l.remark ? '<i class="fas fa-comment-dots"></i> ' + _esc(l.remark) : '<span style="color:var(--tx3)">—</span>') + '</td>' +
               '</tr>';
           }).join('') +
@@ -10665,18 +10718,20 @@ function _loadSetupTasks() {
         items.map(function(t) {
           var fClr = freqColors[t.frequency] || 'var(--tx3)';
           var taskId = 'tsi_' + _esc(t.task_uid);
+          // day_label from backend e.g. "Monday · 10:30 AM" or "1st · 09:00 AM"
+          // Show Plan time badge — this is the planned schedule time
+          var planLabel = t.day_label ? _esc(t.day_label) : '';
           return '<div style="border:1px solid var(--bdr);border-radius:8px;margin-bottom:4px;background:var(--bg);overflow:hidden">' +
             '<div class="ts-task-hd" data-tid="' + _esc(taskId) + '" style="display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer">' +
             '<div style="width:3px;height:28px;background:' + fClr + ';border-radius:2px;flex-shrink:0"></div>' +
             '<div style="flex:1;min-width:0">' +
             '<div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + _esc(t.task_name) + '</div>' +
-            '<div style="font-size:10px;color:var(--tx3);margin-top:2px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">' +
+            '<div style="font-size:10px;color:var(--tx3);margin-top:3px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">' +
             '<span><i class="fas fa-user" style="width:10px"></i> ' + _esc(t.emp_name||t.emp_id) + '</span>' +
-            (t.day_label ? '<span style="color:var(--P);font-weight:700"><i class="fas fa-calendar-day" style="width:10px"></i> ' + _esc(t.day_label) + '</span>' : '') +
-                  (planFmt || actualFmt ? '<div style="display:flex;gap:8px;margin-top:2px">' +
-                    (planFmt ? '<span style="font-size:10px;color:var(--tx3)"><i class="fas fa-calendar-clock" style="color:var(--P)"></i> Plan: <strong>' + _esc(planFmt) + '</strong></span>' : '') +
-                    (actualFmt ? '<span style="font-size:10px;color:var(--G)"><i class="fas fa-check-circle"></i> Actual: <strong>' + actualFmt + '</strong></span>' : '') +
-                    '</div>' : '') +
+            (planLabel
+              ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:1px 7px;border-radius:6px;background:var(--Pl);color:var(--P);font-weight:800;font-size:10px">' +
+                '<i class="fas fa-clock" style="font-size:9px"></i> Plan: ' + planLabel + '</span>'
+              : '') +
             '</div>' +
             '</div>' +
             '<span style="padding:2px 7px;border-radius:6px;font-size:10px;font-weight:800;background:var(--sur2);color:' + fClr + ';">' + _esc(t.frequency||'D') + '</span>' +
@@ -10687,7 +10742,10 @@ function _loadSetupTasks() {
             '<span><i class="fas fa-id-badge"></i> ' + _esc(t.emp_id) + '</span>' +
             '<span><i class="fas fa-building"></i> ' + _esc(t.dept) + '</span>' +
             '<span><i class="fas fa-repeat"></i> ' + _esc(t.frequency) + '</span>' +
-            (t.day_label ? '<span style="color:var(--P);font-weight:700"><i class="fas fa-calendar-day"></i> ' + _esc(t.day_label) + '</span>' : '') +
+            (planLabel
+              ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:7px;background:var(--Pl);color:var(--P);font-weight:800">' +
+                '<i class="fas fa-calendar-clock" style="font-size:10px"></i> Planned: ' + planLabel + '</span>'
+              : '') +
             '</div>' +
             '<button class="btn btn-red btn-xs ts-deact-btn" data-uid="' + _esc(t.task_uid) + '" style="margin-top:2px"><i class="fas fa-trash-alt"></i> Deactivate</button>' +
             '</div></div>';
@@ -15448,23 +15506,29 @@ function _loadSetupTasks() {
       if (empDetail) {
         h += '<div class="card card-nohover card-sm" style="margin-bottom:16px">' +
           '<div class="sec-title" style="margin-bottom:12px"><i class="fas fa-user" style="color:var(--P)"></i> '+_esc(empDetail.name)+' &mdash; Daily Log <span style="color:var(--tx3);font-weight:600">('+_esc(empDetail.dept)+')</span></div>' +
-          '<div class="tw"><table><thead><tr><th>Date</th><th>Task</th><th>Freq</th><th>Status</th><th>Completed At</th><th>Note</th></tr></thead><tbody>' +
+          '<div class="tw"><table><thead><tr><th>Date</th><th>Task</th><th>Freq</th><th>Status</th>' +
+          '<th style="color:var(--P)"><i class="fas fa-calendar-clock"></i> Plan Time</th>' +
+          '<th style="color:var(--G)"><i class="fas fa-check-circle"></i> Actual Time</th>' +
+          '<th>Remark</th></tr></thead><tbody>' +
           (empDetail.log.length ? empDetail.log.map(function (r) {
+            var planTime = r.scheduled_time || '';
+            var actTime  = r.actual ? _tsShort(r.actual) : '';
             var lagTag = '';
             if (r.status === 'Done' && r.actual && r.date) {
-              var ld = Math.round((new Date(String(r.actual).substring(0,10)) - new Date(r.date)) / 86400000);
+              var ld = Math.round((new Date(String(r.actual).substring(0,10)+'T00:00:00') - new Date(r.date+'T00:00:00')) / 86400000);
               lagTag = ld > 0 ? ' <span style="color:var(--O);font-weight:800;font-size:10px">(+'+ld+'d late)</span>' : ' <span style="color:var(--G);font-weight:800;font-size:10px">(on time)</span>';
             }
             return '<tr><td style="font-weight:700">'+_fmtDateShort(r.date)+'</td>' +
               '<td>'+_esc(r.task)+'</td>' +
               '<td>'+_freqBadge(r.freq)+'</td>' +
-              '<td>'+_statusBadge(r.status)+'</td>' +
-              '<td>'+(r.actual ? _fmtDateTime(r.actual) : '&mdash;')+lagTag+'</td>' +
+              '<td>'+_statusBadge(r.status)+lagTag+'</td>' +
+              '<td style="color:var(--P);font-weight:600">'+(planTime?'<i class="fas fa-calendar-clock"></i> '+_esc(planTime):'<span style="color:var(--tx3)">—</span>')+'</td>' +
+              '<td style="color:var(--G);font-weight:600">'+(actTime?'<i class="fas fa-check-circle"></i> '+actTime:'<span style="color:var(--tx3)">—</span>')+'</td>' +
               '<td style="font-size:11px">' +
                 (r.remark ? '<span style="color:var(--I);font-weight:600"><i class="fas fa-comment-dots"></i> '+_esc(r.remark)+'</span>' :
                   (r.buddy_remark ? '<span style="color:var(--tx3)">'+_esc(r.buddy_remark)+'</span>' : '<span style="color:var(--tx4)">—</span>')) +
               '</td></tr>';
-          }).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--tx3);padding:16px">No tasks in this range</td></tr>') +
+          }).join('') : '<tr><td colspan="7" style="text-align:center;color:var(--tx3);padding:16px">No tasks in this range</td></tr>') +
           '</tbody></table></div></div>';
       }
 
@@ -16603,7 +16667,8 @@ function _loadSetupTasks() {
         '<option value="name_asc">Name A-Z</option></select>' +
         '<div style="flex:1;min-width:8px"></div>' +
         '<button class="btn btn-sm" onclick="_loadAtt()" style="white-space:nowrap"><i class="fas fa-chart-bar"></i> Analyze</button>' +
-        '<button class="btn btn-sm btn-outline" onclick="_exportAttCSV()" style="white-space:nowrap"><i class="fas fa-file-export"></i> Export</button>' +
+        '<button class="btn btn-sm btn-outline" onclick="_attExportSumm()" style="white-space:nowrap" title="Export summary CSV"><i class="fas fa-file-csv"></i> Summary</button>' +
+        '<button class="btn btn-sm btn-outline" onclick="_attExportDetail()" style="white-space:nowrap" title="Export full detail CSV"><i class="fas fa-table"></i> Full Detail</button>' +
         '</div>' +
 
         '<div id="attRoot">' + _skel(4) + '</div>';
@@ -16666,12 +16731,27 @@ function _loadSetupTasks() {
 
     function _attExportDetail() {
       var data = _D.attData;
-      if (!data || !data.records || !data.records.length) { _toast('No detail records. Load attendance data first.', 'warn'); return; }
+      if (!data) { _toast('Pehle Analyze karo', 'warn'); return; }
+      // Flatten by_employee → log entries into a flat records array
+      var allRecs = [];
+      (data.by_employee || []).forEach(function(e) {
+        (e.log || []).forEach(function(r) {
+          allRecs.push({
+            emp_id: e.emp_id, name: e.name, dept: e.dept,
+            date: r.date, check_in: r.check_in, check_out: r.check_out,
+            status: r.status, total_hours: r.total_hours,
+            late_mins: r.late_mins, is_late: r.is_late,
+            hours_short: r.hours_short, full_day_thresh_hrs: r.full_day_thresh_hrs
+          });
+        });
+      });
+      if (!allRecs.length) { _toast('No detail records found — check filters', 'warn'); return; }
       function q(v){ return '"'+String(v===null||v===undefined?'':v).replace(/"/g,'""')+'"'; }
       var DAY_N = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-      var head = ['Emp ID','Name','Department','Date','Day','Status','IN Time','OUT Time','Hours Worked','Hours Short','Late (mins)','Full Day Threshold'];
+      var head = ['Emp ID','Name','Department','Date','Day','Status','IN Time','OUT Time','Hours Worked','Hours Short','Late (mins)'];
       var rows = [head.map(q).join(',')];
-      (data.records || []).forEach(function(r) {
+      allRecs.sort(function(a,b){ return (a.date||'').localeCompare(b.date||'') || (a.name||'').localeCompare(b.name||''); });
+      allRecs.forEach(function(r) {
         var dow = DAY_N[new Date((r.date||'2000-01-01')+'T00:00:00').getDay()];
         var stLabel = r.status==='P'?'Present':r.status==='HD'?'Half Day':r.status==='A'?'Absent':r.status==='WO'?'Week Off':r.status==='H'?'Holiday':r.status||'';
         rows.push([
@@ -16680,8 +16760,7 @@ function _loadSetupTasks() {
           r.check_in||'—', r.check_out||'—',
           r.total_hours||'—',
           r.hours_short ? (Math.round(r.hours_short*100)/100)+'h' : '—',
-          r.late_mins != null ? r.late_mins : '—',
-          r.full_day_thresh_hrs ? r.full_day_thresh_hrs+'h' : '—'
+          r.late_mins != null ? r.late_mins : '—'
         ].map(q).join(','));
       });
       var csv = rows.join('\n');
@@ -16689,7 +16768,7 @@ function _loadSetupTasks() {
       a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
       a.download = 'attendance_detail_' + _today() + '.csv';
       a.click();
-      _toast('Attendance full detail exported!', 'ok');
+      _toast('Full detail exported — ' + allRecs.length + ' records!', 'ok');
     }
 
     function _loadAtt() {
@@ -17914,12 +17993,13 @@ function _loadSetupTasks() {
             (isTransOut ? '<span style="padding:2px 8px;border-radius:10px;background:var(--Ol);color:var(--O);font-weight:700;font-size:10.5px"><i class="fas fa-share"></i> Transferred away</span>' : '') +
             (isReceived ? '<span style="padding:2px 8px;border-radius:10px;background:var(--Vl);color:var(--V);font-weight:700;font-size:10.5px"><i class="fas fa-arrow-right-arrow-left"></i> Transferred to you</span>'+(t.transfer_by?'<span style="color:var(--tx3);font-size:10.5px"> by '+_esc(t.transfer_by)+'</span>':'') : '') +
             (isDone&&actualFmt?'<span style="color:var(--G);font-weight:600"><i class="fas fa-check-circle"></i> '+actualFmt+'</span>':'') +
-            (isDone&&t.remark?'<span style="padding:2px 8px;border-radius:8px;background:var(--Il);color:var(--I);font-size:10.5px;font-weight:600"><i class="fas fa-comment-dots"></i> '+_esc(t.remark)+'</span>':'') +
-            // Plan vs Actual time
-            '<div style="display:flex;gap:8px;margin-top:3px;flex-wrap:wrap">' +
-            (planFmt ? '<span style="font-size:10px;color:var(--tx3)"><i class="fas fa-calendar-clock" style="color:var(--P)"></i> Plan: <strong>' + _esc(planFmt) + '</strong></span>' : '') +
-            (actualFmt ? '<span style="font-size:10px;color:var(--G)"><i class="fas fa-check-circle"></i> Actual: <strong>' + actualFmt + '</strong></span>' :
-              (isDone ? '' : (planFmt ? '<span style="font-size:10px;color:var(--tx4)"><i class="fas fa-clock"></i> Actual: <em>pending</em></span>' : ''))) +
+            // ── Fix 4: Remark — show always (Done & Pending) ─────────────────
+            (t.remark?'<span style="padding:2px 8px;border-radius:8px;background:var(--Il);color:var(--I);font-size:10.5px;font-weight:600"><i class="fas fa-comment-dots"></i> '+_esc(t.remark)+'</span>':'') +
+            // ── Fix 5: Plan vs Actual with clear header labels ───────────────
+            '<div style="display:flex;gap:8px;margin-top:3px;flex-wrap:wrap;align-items:center">' +
+            (planFmt ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:7px;background:var(--Pl);color:var(--P);font-size:10px;font-weight:800"><i class="fas fa-calendar-clock" style="font-size:9px"></i> Plan: <strong>' + _esc(planFmt) + '</strong></span>' : '') +
+            (actualFmt ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:7px;background:var(--Gl);color:var(--G);font-size:10px;font-weight:800"><i class="fas fa-check-circle" style="font-size:9px"></i> Actual: <strong>' + actualFmt + '</strong></span>' :
+              (planFmt && !isDone ? '<span style="padding:1px 8px;border-radius:7px;background:var(--sur2);color:var(--tx3);font-size:10px">Actual: pending</span>' : '')) +
             '</div>' +
             '</div></div>' +
             '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">' +

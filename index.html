@@ -8280,7 +8280,7 @@
        JSONP was failing: /exec redirects to echo endpoint (302)
        fetch POST works correctly with GAS doPost
     ══════════════════════════════════════════════════════════ */
-    var GAS_URL = 'https://script.google.com/macros/s/AKfycbz3kLcx03fnDE6bbF2SMGFbi4gk7bY0Hpbf3IFD5aYAxmXWbQ-QocDcm9vYveUwQauM/exec';
+    var GAS_URL = 'https://script.google.com/macros/s/AKfycbwbM-7AWQxwIWZ1W6inbtkIDnkQ2jHR3OqFZziZkxkJtiKHH-g6UwJIIwq5SHSKCicJ/exec';
     var _TOKEN  = '';
 
     var _gasActive = 0; // count of concurrent GAS calls in flight
@@ -10214,16 +10214,32 @@ function _gasX(fn, args, timeout, onOk, onErr) {
       var taskName = row.dataset.name    || '';
       var empId    = row.dataset.emp     || '';
       var empName  = row.dataset.empname || '';
-      var btn = row.querySelector('.cmt-done-btn');
-      if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
-      _gas('markTeamTaskDone', [rowNum, occ, taskName, empId, _cmtDate, ''], function() {
-        _cmtData.forEach(function(r) { if (r.row_num == rowNum && r.emp_id === empId) r.status = 'Done'; });
-        _toast('✓ ' + empName + ' ka task done mark ho gaya', 'ok');
-        _renderCmtList();
-      }, function(e) {
-        _toast(e.message, 'err');
-        if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Done'; }
-      });
+
+      _openModal(
+        '<i class="fas fa-check-circle" style="color:var(--G)"></i> Mark as Done',
+        '<div style="font-size:13px;font-weight:700;color:var(--tx2);margin-bottom:4px">' + _esc(empName) + '</div>' +
+        '<div style="font-size:12px;color:var(--tx3);margin-bottom:14px">' + _esc(taskName) + '</div>' +
+        '<label style="font-size:11px;font-weight:800;color:var(--tx2);text-transform:uppercase;display:block;margin-bottom:6px">Completion Remark <span style="font-weight:400;color:var(--tx3)">(optional)</span></label>' +
+        '<textarea id="cmtDoneRemark" rows="3" placeholder="e.g. Task completed, report submitted…" ' +
+        'style="width:100%;padding:9px 12px;border:1.5px solid var(--bdr);border-radius:8px;font-size:13px;' +
+        'background:var(--bg);color:var(--tx);outline:none;resize:vertical;font-family:inherit;box-sizing:border-box"></textarea>',
+        function() {
+          var remark = ((document.getElementById('cmtDoneRemark') || {}).value || '').trim();
+          _closeModal();
+          var btn = row.querySelector('.cmt-done-btn');
+          if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>'; }
+          _gas('markTeamTaskDone', [rowNum, occ, taskName, empId, _cmtDate, remark], function() {
+            _cmtData.forEach(function(r) { if (r.row_num == rowNum && r.emp_id === empId) { r.status = 'Done'; r.remark = remark; } });
+            _toast('✓ ' + empName + ' ka task done!', 'ok');
+            _renderCmtList();
+          }, function(e) {
+            _toast(e.message, 'err');
+            if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-check"></i> Done'; }
+          });
+        },
+        '<i class="fas fa-check"></i> Mark Done'
+      );
+      setTimeout(function(){ var el2=document.getElementById('cmtDoneRemark'); if(el2) el2.focus(); }, 150);
     }
     function _cmtShiftTask(taskId, empId) {
       _openModal('<i class="fas fa-forward" style="color:var(--O)"></i> Shift Task',
@@ -10620,7 +10636,10 @@ function _loadSetupTasks() {
             '<div style="width:3px;height:28px;background:' + fClr + ';border-radius:2px;flex-shrink:0"></div>' +
             '<div style="flex:1;min-width:0">' +
             '<div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + _esc(t.task_name) + '</div>' +
-            '<div style="font-size:10px;color:var(--tx3);margin-top:1px"><i class="fas fa-user" style="width:10px"></i> ' + _esc(t.emp_name||t.emp_id) + '</div>' +
+            '<div style="font-size:10px;color:var(--tx3);margin-top:1px;display:flex;gap:8px;flex-wrap:wrap">' +
+            '<span><i class="fas fa-user" style="width:10px"></i> ' + _esc(t.emp_name||t.emp_id) + '</span>' +
+            (t.day_date ? '<span style="color:var(--P)"><i class="fas fa-calendar-day" style="width:10px"></i> ' + _esc(t.day_date) + '</span>' : '') +
+            '</div>' +
             '</div>' +
             '<span style="padding:2px 7px;border-radius:6px;font-size:10px;font-weight:800;background:var(--sur2);color:' + fClr + ';">' + _esc(t.frequency||'D') + '</span>' +
             '<i class="fas fa-chevron-down tc" style="color:var(--tx3);font-size:10px;transition:transform .2s;flex-shrink:0"></i>' +
@@ -10630,6 +10649,7 @@ function _loadSetupTasks() {
             '<span><i class="fas fa-id-badge"></i> ' + _esc(t.emp_id) + '</span>' +
             '<span><i class="fas fa-building"></i> ' + _esc(t.dept) + '</span>' +
             '<span><i class="fas fa-repeat"></i> ' + _esc(t.frequency) + '</span>' +
+            (t.day_date ? '<span style="color:var(--P)"><i class="fas fa-calendar-day"></i> ' + _esc(t.day_date) + '</span>' : '') +
             '</div>' +
             '<button class="btn btn-red btn-xs ts-deact-btn" data-uid="' + _esc(t.task_uid) + '" style="margin-top:2px"><i class="fas fa-trash-alt"></i> Deactivate</button>' +
             '</div></div>';
@@ -18357,11 +18377,36 @@ function _loadSetupTasks() {
         body += '<div class="empty-state" style="padding:20px"><i class="fas fa-inbox"></i><p>No records in this range.</p></div>';
       } else if (res.module === 'at') {
         // Shared attendance-status badge builder for this popup
-        function attBadge(status) {
-          var clr = status === 'P' ? 'var(--G)' : status === 'HD' ? 'var(--O)' : status === 'A' ? 'var(--R)' : status === 'H' ? '#4338ca' : 'var(--tx3)';
-          var bg  = status === 'P' ? 'var(--Gl)' : status === 'HD' ? 'var(--Ol)' : status === 'A' ? 'var(--Rl)' : status === 'H' ? '#e0e7ff' : 'var(--sur2)';
-          var lbl = status === 'P' ? 'Present' : status === 'HD' ? 'Half Day' : status === 'A' ? 'Absent' : status === 'H' ? 'Holiday' : status === 'WO' ? 'Week Off' : status || '—';
-          return '<span style="padding:3px 8px;border-radius:6px;font-size:10px;font-weight:800;background:' + bg + ';color:' + clr + ';white-space:nowrap">' + _esc(lbl) + '</span>';
+        function attBadge(status, hoursShort, parsedHours, fullThresh) {
+          // 3-tier HD color coding:
+          // HD with <40% hours worked = red-orange (very short)
+          // HD with 40-75% = orange (normal half day)
+          // Full day (P) = green
+          var clr, bg, lbl;
+          if (status === 'P') {
+            clr = 'var(--G)'; bg = 'var(--Gl)'; lbl = 'Present';
+          } else if (status === 'HD') {
+            // If hoursShort exists and is severe (>60% missing), use red-orange
+            var shortFrac = (hoursShort && fullThresh) ? hoursShort / (fullThresh / 0.75) : 0;
+            if (shortFrac > 0.6) { clr = '#dc6803'; bg = '#fef3c7'; lbl = 'Short Day'; }
+            else { clr = 'var(--O)'; bg = 'var(--Ol)'; lbl = 'Half Day'; }
+          } else if (status === 'A') {
+            clr = 'var(--R)'; bg = 'var(--Rl)'; lbl = 'Absent';
+          } else if (status === 'H') {
+            clr = '#4338ca'; bg = '#e0e7ff'; lbl = 'Holiday';
+          } else if (status === 'WO') {
+            clr = 'var(--tx3)'; bg = 'var(--sur2)'; lbl = 'Week Off';
+          } else {
+            clr = 'var(--tx3)'; bg = 'var(--sur2)'; lbl = status || '—';
+          }
+          var badge = '<span style="padding:3px 8px;border-radius:6px;font-size:10px;font-weight:800;background:' + bg + ';color:' + clr + ';white-space:nowrap">' + _esc(lbl) + '</span>';
+          // Append hours-short warning if HD
+          if (status === 'HD' && hoursShort && hoursShort > 0) {
+            var h = Math.floor(hoursShort), m = Math.round((hoursShort - h) * 60);
+            var shortStr = (h > 0 ? h + 'h ' : '') + (m > 0 ? m + 'm' : '').trim() + ' short';
+            badge += ' <span style="font-size:9px;font-weight:700;color:' + clr + ';opacity:.8">' + shortStr + '</span>';
+          }
+          return badge;
         }
 
         var present = 0, halfDay = 0, absent = 0;
@@ -18394,10 +18439,10 @@ function _loadSetupTasks() {
             } else if (it.status === 'A') {
               timeInfo = '<div style="font-size:10px;color:var(--tx3);margin-top:2px;font-style:italic">No attendance recorded</div>';
             }
-            return '<div style="padding:9px 10px;background:var(--bg);border:1px solid var(--bdr);border-left:3px solid ' + (isActual ? (it.status==='HD'?'var(--O)':'var(--G)') : 'var(--R)') + ';border-radius:8px">' +
+            return '<div style="padding:9px 10px;background:var(--bg);border:1px solid var(--bdr);border-left:3px solid ' + (it.status==='P'?'var(--G)':it.status==='HD'?(it.hours_short&&it.hours_short>2?'#dc6803':'var(--O)'):'var(--R)') + ';border-radius:8px">' +
               '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">' +
               '<span style="font-size:12px;font-weight:700">' + _esc(_fmtDateShort(it.date)) + '</span>' +
-              attBadge(it.status) +
+              attBadge(it.status, it.hours_short, it.parsed_hours, it.full_day_thresh_hrs) +
               '</div>' +
               timeInfo +
               '</div>';
@@ -19108,8 +19153,12 @@ function _loadSetupTasks() {
         '<div class="mod-head">' +
         '<div><div class="mod-title"><i class="fas fa-file-invoice-dollar" style="color:var(--G)"></i> Salary Sheet</div>' +
         '<div class="mod-sub">Month select karo — attendance & leave ke basis pe salary tayaar hogi</div></div>' +
+        '<div style="display:flex;gap:6px">' +
         '<button class="btn btn-sm btn-outline" id="prExportBtn" onclick="_prExportCSV()" style="display:none">' +
-        '<i class="fas fa-file-csv"></i> Export</button>' +
+        '<i class="fas fa-file-csv"></i> Summary</button>' +
+        '<button class="btn btn-sm btn-outline" id="prExportDetailBtn" onclick="_prExportDetailCSV()" style="display:none">' +
+        '<i class="fas fa-table"></i> Full Detail</button>' +
+        '</div>' +
         '</div>' +
 
         // Month + Dept selectors
@@ -19154,12 +19203,16 @@ function _loadSetupTasks() {
         '<div style="margin-top:10px;font-weight:600">Computing salaries…</div>' +
         '<div style="font-size:11px;color:var(--tx3);margin-top:4px">Attendance + leaves + deductions calculate ho rahi hain</div></div>';
       if (strip) strip.innerHTML = '';
-      if (expBtn) expBtn.style.display = 'none';
+      var expBtn    = document.getElementById('prExportBtn');
+      var expDetBtn = document.getElementById('prExportDetailBtn');
+      if (expBtn)    expBtn.style.display    = 'none';
+      if (expDetBtn) expDetBtn.style.display = 'none';
 
       _gas('getPayrollSummary', [month, dept], function(data) {
         _prData = data;
         _prRenderCards(data);
-        if (expBtn) expBtn.style.display = '';
+        if (expBtn)    expBtn.style.display    = '';
+        if (expDetBtn) expDetBtn.style.display = '';
       }, function(e) {
         if (grid) grid.innerHTML =
           '<div class="te" style="grid-column:1/-1"><i class="fas fa-exclamation-triangle"></i> ' + _esc(e.message) +
@@ -19498,6 +19551,8 @@ function _loadSetupTasks() {
         _avatarEl(emp.emp_name, emp.photo, 34) +
         '<div><div style="font-weight:800;font-size:15px">'+_esc(emp.emp_name)+'</div>' +
         '<div style="font-size:11px;color:var(--tx3)">'+_esc(emp.dept)+' · '+_esc(monthLbl)+'</div></div>' +
+        '<button class="btn btn-xs btn-outline" style="margin-left:auto" onclick="_prDownloadCard(' + JSON.stringify(emp.emp_id) + ')" title="Download salary card">' +
+        '<i class="fas fa-download"></i> Download</button>' +
         '</div>',
         body
       );
@@ -19548,9 +19603,131 @@ function _loadSetupTasks() {
       var csv = rows.map(function(r){return r.join(',');}).join('\n');
       var a = document.createElement('a');
       a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
-      a.download = 'payroll_' + (_prData.month || _currMonth()) + '.csv';
+      a.download = 'payroll_summary_' + (_prData.month || _currMonth()) + '.csv';
       a.click();
-      _toast('Exported!', 'ok');
+      _toast('Summary exported!', 'ok');
+    }
+
+    // Full Detail Export — all staff day-wise with IN/OUT + leave + salary
+    function _prExportDetailCSV() {
+      if (!_prData || !_prData.employees) { _toast('No data loaded', 'err'); return; }
+      var month = _prData.month || _currMonth();
+      var head = [
+        'Emp ID','Name','Dept',
+        'Date','Day','Status','IN','OUT','Hours Worked','Hours Short',
+        'Leave Type',
+        'Working Days','Present Days','Leave Days','Absent Days','LWP Days',
+        'Basic','HRA','Conv','Other Allow','Gross',
+        'PF','ESI','TDS','Other Ded','LWP Ded','Total Ded','Net Pay'
+      ];
+      var rows = [head];
+      var DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      (_prData.employees).forEach(function(e) {
+        var log = e.daily_log || [];
+        if (!log.length) {
+          // Employee with no daily log — just one summary row
+          rows.push(['"'+e.emp_id+'"','"'+e.emp_name+'"','"'+e.dept+'"',
+            month,'','','','','','','',
+            e.total_working_days,e.present_days,e.leave_days,e.absent_days,e.lwp_days,
+            e.basic_salary,e.hra,e.conveyance,e.other_allowances,e.gross_salary,
+            e.pf_deduction,e.esi_deduction,e.tds,e.other_deductions,e.lwp_deduction,
+            e.total_deductions,e.net_salary]);
+          return;
+        }
+        log.forEach(function(d, idx) {
+          var dow = DAY_NAMES[new Date(d.date+'T00:00:00').getDay()];
+          var leaveType = (d.status !== 'P' && d.status !== 'HD' && d.status !== 'A' && d.status !== 'WO' && d.status !== 'H') ? d.status : '';
+          var hoursShort = ''; // not in daily_log; left blank
+          rows.push([
+            '"'+e.emp_id+'"','"'+e.emp_name+'"','"'+e.dept+'"',
+            d.date, dow, d.status,
+            d.in||'', d.out||'', d.hours||'', hoursShort,
+            '"'+leaveType+'"',
+            // Salary details only on first row of each employee
+            idx===0 ? e.total_working_days : '',
+            idx===0 ? e.present_days : '',
+            idx===0 ? e.leave_days : '',
+            idx===0 ? e.absent_days : '',
+            idx===0 ? e.lwp_days : '',
+            idx===0 ? e.basic_salary : '',
+            idx===0 ? e.hra : '',
+            idx===0 ? e.conveyance : '',
+            idx===0 ? e.other_allowances : '',
+            idx===0 ? e.gross_salary : '',
+            idx===0 ? e.pf_deduction : '',
+            idx===0 ? e.esi_deduction : '',
+            idx===0 ? e.tds : '',
+            idx===0 ? e.other_deductions : '',
+            idx===0 ? e.lwp_deduction : '',
+            idx===0 ? e.total_deductions : '',
+            idx===0 ? e.net_salary : ''
+          ]);
+        });
+      });
+      var csv = rows.map(function(r){ return r.join(','); }).join('\n');
+      var a = document.createElement('a');
+      a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
+      a.download = 'payroll_full_detail_' + month + '.csv';
+      a.click();
+      _toast('Full detail exported!', 'ok');
+    }
+
+    // Download individual employee salary card as CSV (Change 5)
+    function _prDownloadCard(empId) {
+      if (!_prData) return;
+      var emp = null;
+      (_prData.employees || []).forEach(function(e){ if (e.emp_id === empId) emp = e; });
+      if (!emp) { _toast('Employee not found', 'err'); return; }
+      var month = _prData.month || _currMonth();
+      var log = emp.daily_log || [];
+      var DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+      // Section 1: Summary
+      var rows = [
+        ['SALARY CARD — ' + emp.emp_name],
+        ['Employee ID', emp.emp_id],
+        ['Department', emp.dept],
+        ['Month', month],
+        [''],
+        ['ATTENDANCE SUMMARY'],
+        ['Working Days', emp.total_working_days],
+        ['Present Days', emp.present_days],
+        ['Leave Days', emp.leave_days],
+        ['Absent / LWP', emp.absent_days + emp.lwp_days],
+        ['Holidays', emp.holiday_days],
+        ['Week Off', emp.week_off_days],
+        ['Payable Days', emp.payable_days],
+        [''],
+        ['EARNINGS'],
+        ['Basic Salary', emp.basic_salary],
+        ['HRA', emp.hra],
+        ['Conveyance', emp.conveyance],
+        ['Other Allowances', emp.other_allowances],
+        ['Gross Salary', emp.gross_salary],
+        [''],
+        ['DEDUCTIONS'],
+        ['PF', emp.pf_deduction],
+        ['ESI', emp.esi_deduction],
+        ['TDS', emp.tds],
+        ['Other', emp.other_deductions],
+        ['LWP Deduction', emp.lwp_deduction],
+        ['Total Deductions', emp.total_deductions],
+        [''],
+        ['NET SALARY', emp.net_salary],
+        [''],
+        ['DAILY ATTENDANCE LOG'],
+        ['Date','Day','Status','IN','OUT','Hours']
+      ];
+      log.forEach(function(d) {
+        rows.push([d.date, DAY_NAMES[new Date(d.date+'T00:00:00').getDay()], d.status, d.in||'—', d.out||'—', d.hours||'—']);
+      });
+
+      var csv = rows.map(function(r){ return r.map(function(c){ return '"'+String(c||'').replace(/"/g,'""')+'"'; }).join(','); }).join('\n');
+      var a = document.createElement('a');
+      a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
+      a.download = 'salary_card_' + emp.emp_id + '_' + month + '.csv';
+      a.click();
+      _toast('Salary card downloaded!', 'ok');
     }
 
     /* ══════════════════════════════════════════════════════════════════════

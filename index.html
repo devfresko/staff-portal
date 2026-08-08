@@ -8280,7 +8280,7 @@
        JSONP was failing: /exec redirects to echo endpoint (302)
        fetch POST works correctly with GAS doPost
     ══════════════════════════════════════════════════════════ */
-    var GAS_URL = 'https://script.google.com/macros/s/AKfycbz4Rg6SyX9U1_iGmJwLw28tyJof77gHWYTudXonDQjrp6XAUa94UOMmOW0U38R6edts/exec';
+    var GAS_URL = 'https://script.google.com/macros/s/AKfycbxr8ZHMyfqvGkysBUxGEi3jeK0-HN5SFCUlafWm1cMUdp031-JM_9vRJ1i5rmV_l0Q/exec';
     var _TOKEN  = '';
 
     var _gasActive = 0; // count of concurrent GAS calls in flight
@@ -10011,6 +10011,7 @@ function _gasX(fn, args, timeout, onOk, onErr) {
           var isTransOut = t.is_transferred;
           var rowBg      = ti%2===0?'var(--bg)':'var(--sur2)';
           var actualFmt  = t.actual ? _tsShort(t.actual) : '';
+          var planFmt    = t.scheduled_time || '';
           var transFmt   = t.transferred_at ? _tsShort(t.transferred_at) : '';
           var rowId      = 'cmtrow_' + t.row_num + '_' + Math.random().toString(36).slice(2,7);
           return '<div id="'+rowId+'" data-row="'+t.row_num+'" data-occ="'+t.occ+'" data-uid="'+_esc(t.task_uid||'')+'" data-planned="'+_esc(t.planned||'')+'" data-name="'+_esc(t.task_name||'')+'" data-emp="'+_esc(emp.emp_id)+'" data-empname="'+_esc(emp.name)+'" data-dt="'+_cmtDate+'" style="display:flex;align-items:center;gap:10px;padding:9px 14px 9px 60px;background:'+rowBg+';border-top:'+(ti>0?'1px solid var(--bdr)':'none')+'">' +
@@ -10048,31 +10049,57 @@ function _gasX(fn, args, timeout, onOk, onErr) {
     /* ── Smart timestamp formatter: "Today 10:30", "Yesterday 14:05", "27 Jun 09:00" ── */
     function _tsShort(ts) {
       if (!ts) return '';
-      // ts format: "dd-MM-yyyy HH:mm:ss" or "yyyy-MM-dd HH:mm:ss"
+      var s = String(ts).trim();
+      if (s === '-' || s === 'undefined' || s === 'null') return '—';
+
+      // Handle raw JS Date.toString() format: "Apr 01 2026 00:00:00 GMT+0530 (India Standard Time)"
+      // or "Mon Apr 01 2026 00:00:00 GMT+0530"
+      var gmtMatch = s.match(/([A-Za-z]{3})\s+(\d{1,2})\s+(\d{4})\s+(\d{2}:\d{2})/);
+      if (gmtMatch) {
+        var months = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+        var mo = months[gmtMatch[1]], dy = parseInt(gmtMatch[2]), yr = parseInt(gmtMatch[3]);
+        var hhmm = gmtMatch[4];
+        var today0 = new Date(); today0.setHours(0,0,0,0);
+        var dt0 = new Date(yr, mo, dy);
+        var yest0 = new Date(today0); yest0.setDate(today0.getDate()-1);
+        var mn = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        var prefix = dt0.getTime()===today0.getTime() ? 'Today' : dt0.getTime()===yest0.getTime() ? 'Yesterday' : dy+' '+mn[mo]+(yr!==today0.getFullYear()?' '+yr:'');
+        return hhmm && hhmm!=='00:00' ? prefix + ' ' + hhmm : prefix;
+      }
+
+      // Handle ISO 8601 with T: "2026-08-10T14:30:00"
+      if (s.indexOf('T') > -1) {
+        var isoDate = s.substring(0,10);
+        var isoTime = s.substring(11,16);
+        return _tsShort(isoDate + (isoTime ? ' ' + isoTime + ':00' : ' 00:00:00'));
+      }
+
+      // Original format: "dd-MM-yyyy HH:mm:ss" or "yyyy-MM-dd HH:mm:ss"
       try {
-        var parts = String(ts).split(' ');
+        var parts = s.split(' ');
         var datePart = parts[0] || '', timePart = parts[1] || '';
-        var hhmm = timePart.substring(0,5); // "HH:mm"
-        // Parse date
-        var d;
+        var hhmm2 = timePart.substring(0,5);
+        var d2;
         if (datePart.includes('-')) {
           var dp = datePart.split('-');
-          if (dp[0].length === 4) { // yyyy-MM-dd
-            d = new Date(parseInt(dp[0]), parseInt(dp[1])-1, parseInt(dp[2]));
-          } else { // dd-MM-yyyy
-            d = new Date(parseInt(dp[2]), parseInt(dp[1])-1, parseInt(dp[0]));
+          if (dp[0].length === 4) {
+            d2 = new Date(parseInt(dp[0]), parseInt(dp[1])-1, parseInt(dp[2]));
+          } else {
+            d2 = new Date(parseInt(dp[2]), parseInt(dp[1])-1, parseInt(dp[0]));
           }
         }
-        if (!d || isNaN(d)) return String(ts).substring(0,16);
-        var today = new Date(); today.setHours(0,0,0,0);
-        var yesterday = new Date(today); yesterday.setDate(today.getDate()-1);
-        var t = new Date(d); t.setHours(0,0,0,0);
-        var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-        if (t.getTime() === today.getTime())     return 'Today ' + hhmm;
-        if (t.getTime() === yesterday.getTime()) return 'Yesterday ' + hhmm;
-        return d.getDate() + ' ' + months[d.getMonth()] + ' ' + hhmm;
-      } catch(e) { return String(ts).substring(0,16); }
-    }
+        if (!d2 || isNaN(d2)) return s.substring(0,16);
+        var today2 = new Date(); today2.setHours(0,0,0,0);
+        var yesterday2 = new Date(today2); yesterday2.setDate(today2.getDate()-1);
+        var t2 = new Date(d2); t2.setHours(0,0,0,0);
+        var months2 = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        var lbl;
+        if (t2.getTime() === today2.getTime())     lbl = 'Today';
+        else if (t2.getTime() === yesterday2.getTime()) lbl = 'Yesterday';
+        else lbl = d2.getDate() + ' ' + months2[d2.getMonth()] + (d2.getFullYear() !== today2.getFullYear() ? ' ' + d2.getFullYear() : '');
+        return hhmm2 && hhmm2 !== '00:00' ? lbl + ' ' + hhmm2 : lbl;
+      } catch(e2) { return s.substring(0,16); }
+      }
 
     function _cmtTransfer(el) {
       var row = el.closest('[data-row]');
@@ -10333,8 +10360,8 @@ function _gasX(fn, args, timeout, onOk, onErr) {
         '<div style="display:flex;gap:8px;align-items:center">' +
         '<input type="date" id="csStartDate" value="' + todayDt + '" style="flex:1">' +
         '<div style="display:flex;flex-direction:column;gap:2px">' +
-        '<label style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;margin:0">Time <span style="font-weight:400;color:var(--tx4)">(when task should be done)</span></label>' +
-        '<input type="time" id="csTime" value="10:00" style="width:120px">' +
+        '<label style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;margin:0">Task Time <span style="color:var(--R)">★</span> <span style="font-weight:400;color:var(--tx4)">(kitne bje karna hai)</span></label>' +
+        '<input type="time" id="csTime" placeholder="--:--" required style="width:120px">' +
         '</div></div></div>' +
         '</div>' +
         '<div id="csFreqX"></div>' +
@@ -10646,6 +10673,10 @@ function _loadSetupTasks() {
             '<div style="font-size:10px;color:var(--tx3);margin-top:2px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">' +
             '<span><i class="fas fa-user" style="width:10px"></i> ' + _esc(t.emp_name||t.emp_id) + '</span>' +
             (t.day_label ? '<span style="color:var(--P);font-weight:700"><i class="fas fa-calendar-day" style="width:10px"></i> ' + _esc(t.day_label) + '</span>' : '') +
+                  (planFmt || actualFmt ? '<div style="display:flex;gap:8px;margin-top:2px">' +
+                    (planFmt ? '<span style="font-size:10px;color:var(--tx3)"><i class="fas fa-calendar-clock" style="color:var(--P)"></i> Plan: <strong>' + _esc(planFmt) + '</strong></span>' : '') +
+                    (actualFmt ? '<span style="font-size:10px;color:var(--G)"><i class="fas fa-check-circle"></i> Actual: <strong>' + actualFmt + '</strong></span>' : '') +
+                    '</div>' : '') +
             '</div>' +
             '</div>' +
             '<span style="padding:2px 7px;border-radius:6px;font-size:10px;font-weight:800;background:var(--sur2);color:' + fClr + ';">' + _esc(t.frequency||'D') + '</span>' +
@@ -10921,11 +10952,12 @@ function _loadSetupTasks() {
       var task       = taskInp    ? taskInp.value.trim()     : '';
       var freq       = freqSel    ? freqSel.value            : 'D';
       var startDate  = startInp   ? startInp.value           : _today();
-      var taskTime   = timeInp    ? (timeInp.value || '10:00') : '10:00';
+      var taskTime   = timeInp    ? (timeInp.value || '') : '';
 
       if (!_req(empId,     'Employee'))   { _endSub('btnSaveTask'); return; }
       if (!_req(task,      'Task Name'))  { _endSub('btnSaveTask'); return; }
       if (!_req(startDate, 'Start Date')) { _endSub('btnSaveTask'); return; }
+      if (!taskTime) { _toast('Task Time is required — kitne bje karna hai?', 'warn'); _endSub('btnSaveTask'); return; }
 
       // Send datetime-local format so backend extracts date + time together
       var obj = {
@@ -10959,7 +10991,7 @@ function _loadSetupTasks() {
     }
     if (taskInp) taskInp.value = '';
     if (startInp) startInp.value = _today();
-    if (timeInp) timeInp.value = '10:00';
+    if (timeInp) timeInp.value = '';   // clear — next task must pick own time
     document.getElementById('csFreqX').innerHTML = '';
     _loadSetupTasks();
   } else {
@@ -11421,6 +11453,7 @@ function _loadSetupTasks() {
                 (d.status !== 'Completed' ? '<span>' + dlTxt + '</span>' : '') +
                 (d.revision_1 ? '<span style="color:var(--V)"><i class="fas fa-calendar-days"></i> Rev1: ' + _fmtDate(d.revision_1) + '</span>' : '') +
                 (d.revision_2 ? '<span style="color:var(--V)"><i class="fas fa-calendar-days"></i> Rev2: ' + _fmtDate(d.revision_2) + '</span>' : '') +
+                (d.completion_remarks || d.remarks ? '<div style="margin-top:6px;padding:6px 10px;background:var(--Il);border-radius:6px;font-size:11px;color:var(--I);display:flex;align-items:flex-start;gap:6px"><i class="fas fa-comment-dots" style="margin-top:1px;flex-shrink:0"></i><span>' + _esc(d.completion_remarks || d.remarks) + '</span></div>' : '') +
                 '</div>' +
                 '<div class="dc-act">' +
                 (!isOut && d.status !== 'Completed' && d.status !== 'Cancelled' ?
@@ -16531,6 +16564,10 @@ function _loadSetupTasks() {
         '<div class="mod-head">' +
         '<div><div class="mod-title">Attendance Analytics</div>' +
         '<div class="mod-sub">Presence rates, late arrivals, work hours &amp; department trends</div></div>' +
+        '<div style="display:flex;gap:6px">' +
+        '<button class="btn btn-sm btn-outline" id="attExpSummBtn" onclick="_attExportSumm()" style="display:none"><i class="fas fa-file-csv"></i> Summary</button>' +
+        '<button class="btn btn-sm btn-outline" id="attExpDetBtn"  onclick="_attExportDetail()" style="display:none"><i class="fas fa-table"></i> Full Detail</button>' +
+        '</div>' +
         '</div>' +
 
         // ── Single-row filter bar ─────────────────────────────────────────
@@ -16598,6 +16635,63 @@ function _loadSetupTasks() {
       _loadAtt();
     }
 
+    // ── Attendance Analytics Export functions ─────────────────────────────
+    function _attExportSumm() {
+      var data = _D.attData;
+      if (!data || !data.employees || !data.employees.length) { _toast('Load attendance data first', 'warn'); return; }
+      function q(v){ return '"'+String(v===null||v===undefined?'':v).replace(/"/g,'""')+'"'; }
+      var DAY_N = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      var head = ['Emp ID','Name','Department','From','To','Working Days','Present','Half Day','Absent','Week Off','Holiday','LWP','Payable Days','Attendance %','Avg Hours/Day'];
+      var rows = [head.map(q).join(',')];
+      (data.employees || []).forEach(function(e) {
+        var wd = (e.present_days||0) + (e.half_days||0)*0.5 + (e.absent_days||0);
+        var pct = wd > 0 ? Math.round(((e.present_days||0) + (e.half_days||0)*0.5) / wd * 100) : 0;
+        rows.push([
+          e.emp_id, e.emp_name, e.dept,
+          data.from||'', data.to||'',
+          wd, e.present_days||0, e.half_days||0, e.absent_days||0,
+          e.week_off_days||0, e.holiday_days||0, e.lwp_days||0,
+          (e.present_days||0) + (e.half_days||0)*0.5 + (e.leave_days||0),
+          pct+'%',
+          e.avg_hours ? (Math.round(e.avg_hours*10)/10)+'h' : '—'
+        ].map(q).join(','));
+      });
+      var csv = rows.join('\n');
+      var a = document.createElement('a');
+      a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
+      a.download = 'attendance_summary_' + _today() + '.csv';
+      a.click();
+      _toast('Attendance summary exported!', 'ok');
+    }
+
+    function _attExportDetail() {
+      var data = _D.attData;
+      if (!data || !data.records || !data.records.length) { _toast('No detail records. Load attendance data first.', 'warn'); return; }
+      function q(v){ return '"'+String(v===null||v===undefined?'':v).replace(/"/g,'""')+'"'; }
+      var DAY_N = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+      var head = ['Emp ID','Name','Department','Date','Day','Status','IN Time','OUT Time','Hours Worked','Hours Short','Late (mins)','Full Day Threshold'];
+      var rows = [head.map(q).join(',')];
+      (data.records || []).forEach(function(r) {
+        var dow = DAY_N[new Date((r.date||'2000-01-01')+'T00:00:00').getDay()];
+        var stLabel = r.status==='P'?'Present':r.status==='HD'?'Half Day':r.status==='A'?'Absent':r.status==='WO'?'Week Off':r.status==='H'?'Holiday':r.status||'';
+        rows.push([
+          r.emp_id||'', r.name||'', r.dept||'',
+          r.date||'', dow, stLabel,
+          r.check_in||'—', r.check_out||'—',
+          r.total_hours||'—',
+          r.hours_short ? (Math.round(r.hours_short*100)/100)+'h' : '—',
+          r.late_mins != null ? r.late_mins : '—',
+          r.full_day_thresh_hrs ? r.full_day_thresh_hrs+'h' : '—'
+        ].map(q).join(','));
+      });
+      var csv = rows.join('\n');
+      var a = document.createElement('a');
+      a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
+      a.download = 'attendance_detail_' + _today() + '.csv';
+      a.click();
+      _toast('Attendance full detail exported!', 'ok');
+    }
+
     function _loadAtt() {
       var root = document.getElementById('attRoot');
       if (root) root.innerHTML = _skel(4);
@@ -16617,6 +16711,10 @@ function _loadSetupTasks() {
       _gasX('getAttendanceAnalyticsV2', [{ from: from, to: to, dept: dept, empId: emp, status: status }], 45000, function (data) {
         _D.attData = data;
         _renderAtt();
+        var sb = document.getElementById('attExpSummBtn');
+        var db = document.getElementById('attExpDetBtn');
+        if (sb) sb.style.display = '';
+        if (db) db.style.display = '';
       }, function (e) {
         if (root) root.innerHTML =
           '<div class="te"><i class="fas fa-exclamation-triangle"></i> ' + _esc(e.message) +
@@ -17800,6 +17898,7 @@ function _loadSetupTasks() {
           var isReceived = !!(t.is_received);
           var canDo      = !isDone && !isTransOut;
           var actualFmt  = t.actual ? _tsShort(t.actual) : '';
+          var planFmt    = t.scheduled_time || '';
           var rowId = 'ckrow_' + t.row_num + '_' + Math.random().toString(36).slice(2,7);
           var sc    = _colorForStatus(t.status);
           var rowBorder = isReceived ? 'border-left:3px solid var(--V)' : '';
@@ -17816,6 +17915,12 @@ function _loadSetupTasks() {
             (isReceived ? '<span style="padding:2px 8px;border-radius:10px;background:var(--Vl);color:var(--V);font-weight:700;font-size:10.5px"><i class="fas fa-arrow-right-arrow-left"></i> Transferred to you</span>'+(t.transfer_by?'<span style="color:var(--tx3);font-size:10.5px"> by '+_esc(t.transfer_by)+'</span>':'') : '') +
             (isDone&&actualFmt?'<span style="color:var(--G);font-weight:600"><i class="fas fa-check-circle"></i> '+actualFmt+'</span>':'') +
             (isDone&&t.remark?'<span style="padding:2px 8px;border-radius:8px;background:var(--Il);color:var(--I);font-size:10.5px;font-weight:600"><i class="fas fa-comment-dots"></i> '+_esc(t.remark)+'</span>':'') +
+            // Plan vs Actual time
+            '<div style="display:flex;gap:8px;margin-top:3px;flex-wrap:wrap">' +
+            (planFmt ? '<span style="font-size:10px;color:var(--tx3)"><i class="fas fa-calendar-clock" style="color:var(--P)"></i> Plan: <strong>' + _esc(planFmt) + '</strong></span>' : '') +
+            (actualFmt ? '<span style="font-size:10px;color:var(--G)"><i class="fas fa-check-circle"></i> Actual: <strong>' + actualFmt + '</strong></span>' :
+              (isDone ? '' : (planFmt ? '<span style="font-size:10px;color:var(--tx4)"><i class="fas fa-clock"></i> Actual: <em>pending</em></span>' : ''))) +
+            '</div>' +
             '</div></div>' +
             '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">' +
             _statusBadge(t.status) +

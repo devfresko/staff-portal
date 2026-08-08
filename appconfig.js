@@ -8,7 +8,7 @@ window.APP_CONFIG = {
 
   // ── GAS Web App URL ────────────────────────────────────────────────────
   // Har nayi deployment ke baad sirf yahan update karo
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbwnDA1XAzMH-FaF6beNZgATTX9JK5FyK_m7bMhNxbGfgw7YFH2VYU5eG0B39t1ozzUn/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbyx9xxxZnDKWV02PPxkM0IFZLp9MqYafUWbgGKzxARkRKaTFaEcR6f2tLeQEtaOHue0/exec',
 
   // ── App Info ────────────────────────────────────────────────────────────
   APP_NAME:    'Fresko Staff Portal',

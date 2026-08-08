@@ -809,11 +809,12 @@
     .ana-filter-grp { display: flex; flex-direction: column; gap: 4px; }
     .ana-lbl { font-size: 10px; font-weight: 800; color: var(--tx3); text-transform: uppercase; letter-spacing: .5px; }
     .ana-sel {
-      padding: 6px 10px; border: 1.5px solid var(--bdr); border-radius: 8px;
+      padding: 7px 10px; border: 1.5px solid var(--bdr); border-radius: 8px;
       font-size: 12px; background: var(--bg); color: var(--tx); outline: none;
-      transition: border-color .15s;
+      transition: border-color .15s; font-family: inherit;
+      appearance: none; -webkit-appearance: none;
     }
-    .ana-sel:focus { border-color: var(--P); }
+    .ana-sel:focus { border-color: var(--P); box-shadow: 0 0 0 3px rgba(99,102,241,.1); }
     .ana-kpi-row {
       display: grid; grid-template-columns: repeat(8,1fr); gap: 10px; margin-bottom: 14px;
     }
@@ -2359,16 +2360,37 @@
       align-items: center;
       gap: 8px;
       flex-wrap: wrap;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
       padding: 10px 14px;
-      background: var(--sur);
+      background: var(--sur2);
       border: 1px solid var(--bdr);
-      border-radius: var(--r2);
+      border-radius: 12px;
     }
 
     .fbar input,
     .fbar select {
-      padding: 7px 11px;
+      padding: 7px 10px;
+      border: 1.5px solid var(--bdr);
+      border-radius: 8px;
+      font-size: 12px;
+      background: var(--bg);
+      color: var(--tx);
+      outline: none;
+      transition: border-color .15s;
+      font-family: inherit;
+    }
+    .fbar input:focus,
+    .fbar select:focus {
+      border-color: var(--P);
+    }
+    .fbar select {
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%2394a3b8'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      padding-right: 28px;
+    }ng: 7px 11px;
       border: 1.5px solid var(--bdr);
       border-radius: 8px;
       font-size: 12px;
@@ -2394,10 +2416,12 @@
     }
 
     .fbar label {
-      font-size: 12px;
-      color: var(--tx2);
-      font-weight: 700;
+      font-size: 10px;
+      color: var(--tx3);
+      font-weight: 800;
       white-space: nowrap;
+      text-transform: uppercase;
+      letter-spacing: .4px;
     }
 
     .fbar-spacer {
@@ -5144,12 +5168,12 @@
     .ss-inp{width:100%;cursor:pointer;background:var(--sur)!important;caret-color:transparent;user-select:none}
     .ss-inp.ss-open{border-color:var(--P)!important;box-shadow:0 0 0 3px rgba(99,102,241,.15)}
     .ss-arr{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--tx3);pointer-events:none;font-size:11px;transition:transform .2s}
-    .ss-list{position:absolute;top:calc(100% + 4px);left:0;right:0;min-width:160px;z-index:9999;background:var(--sur);border:1px solid var(--bdr2);border-radius:12px;box-shadow:var(--shad3);display:none;flex-direction:column;max-height:260px;overflow:hidden}
+    .ss-list{position:absolute;top:calc(100% + 4px);left:0;min-width:max(100%,180px);z-index:9999;background:var(--sur);border:1px solid var(--bdr2);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.18);display:none;flex-direction:column;max-height:280px;overflow:hidden}
     .ss-list.ss-open{display:flex}
     .ss-sw{padding:8px;border-bottom:1px solid var(--bdr);flex-shrink:0}
     .ss-si{width:100%;padding:7px 10px;border:1px solid var(--bdr);border-radius:8px;background:var(--bg);font-size:13px;color:var(--tx);outline:none}
     .ss-opts{overflow-y:auto;max-height:195px}
-    .ss-opt{padding:9px 14px;font-size:13px;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--tx);transition:background .1s}
+    .ss-opt{padding:9px 14px;font-size:13px;cursor:pointer;white-space:nowrap;color:var(--tx);transition:background .1s}
     .ss-opt:hover,.ss-opt.ss-hl{background:var(--Pl);color:var(--P)}
     .ss-opt.ss-hi{display:none}
     .ss-none{padding:10px 14px;font-size:12px;color:var(--tx3);text-align:center}
@@ -5887,6 +5911,58 @@
     /* ── View / tab content entrance ─────────────────────────────────────── */
     .view-enter { animation: slideInUp .38s cubic-bezier(.34,1.2,.64,1) forwards; }
     .tab-enter  { animation: tabSlide  .28s cubic-bezier(.34,1.2,.64,1) forwards; }
+    /* ═══════════════ FILTER BAR UNIFIED DESIGN ═══════════════ */
+    .fbar-card {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      padding: 10px 14px; background: var(--sur2);
+      border: 1px solid var(--bdr); border-radius: 12px; margin-bottom: 12px;
+    }
+    .fbar-label {
+      font-size: 10px; font-weight: 800; color: var(--tx3);
+      text-transform: uppercase; letter-spacing: .4px; white-space: nowrap;
+    }
+    .fbar-divider {
+      width: 1px; height: 24px; background: var(--bdr); flex-shrink: 0;
+    }
+    .fbar-hint {
+      font-size: 10px; color: var(--tx3); margin: -6px 2px 10px;
+      display: flex; align-items: center; gap: 5px;
+    }
+
+    /* Modal body scrollable on small screens */
+    #modalBody { max-height: 75vh; overflow-y: auto; }
+    @media (max-width: 640px) {
+      #modalBody { max-height: 80vh; }
+      #modal { border-radius: 16px 16px 0 0 !important; }
+    }
+
+    /* Salary sheet card grid responsive */
+    .pr-card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 12px;
+    }
+    @media (max-width: 600px) {
+      .pr-card-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+    }
+    @media (max-width: 400px) {
+      .pr-card-grid { grid-template-columns: 1fr; }
+    }
+
+    /* Summary strip responsive */
+    .pr-summary-strip {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 10px; margin-bottom: 16px;
+    }
+
+    /* Task setup filter */
+    .ts-filter-bar {
+      background: var(--sur2); border: 1px solid var(--bdr);
+      border-radius: 10px; padding: 10px 12px; margin-bottom: 12px;
+      display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    }
+
     @media (max-width: 768px) {
       /* Disable tab slide animation on mobile — causes scroll jump */
       .tab-enter { animation: none !important; }
@@ -7909,10 +7985,12 @@
           if(!was){
             // Use position:fixed so dropdown escapes any transform stacking context
             var rect = w.getBoundingClientRect();
-            list.style.cssText = 'position:fixed;left:'+rect.left+'px;top:'+(rect.bottom+4)+'px;' +
-              'width:'+Math.max(rect.width,180)+'px;z-index:99999;' +
-              'background:var(--sur);border:1px solid var(--bdr2);border-radius:12px;' +
-              'box-shadow:var(--shad3);display:flex;flex-direction:column;max-height:260px;overflow:hidden';
+            var _ssBg = getComputedStyle(document.documentElement).getPropertyValue('--sur').trim() || '#fff';
+            var _ssBdr = getComputedStyle(document.documentElement).getPropertyValue('--bdr2').trim() || '#e2e8f0';
+            list.style.cssText = 'position:fixed!important;left:'+rect.left+'px;top:'+(rect.bottom+4)+'px;' +
+              'min-width:'+Math.max(rect.width,200)+'px;width:auto;z-index:999999!important;' +
+              'background:'+(_ssBg||'#fff')+';border:1px solid '+(_ssBdr||'#e2e8f0')+';border-radius:12px;' +
+              'box-shadow:0 8px 32px rgba(0,0,0,.2);display:flex!important;flex-direction:column;max-height:280px;overflow:hidden';
             list.classList.add('ss-open'); inp.classList.add('ss-open');
             var arr=w.querySelector('.ss-arr'); if(arr) arr.style.transform='translateY(-50%) rotate(180deg)';
             var si=list.querySelector('.ss-si');
@@ -18790,11 +18868,10 @@ function _loadSetupTasks() {
         '<div id="prMonthInfo" style="font-size:11px;color:var(--tx3);margin-left:4px"></div>' +
         '</div>' +
 
-        // Summary strip
-        '<div id="prSummaryStrip" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:16px"></div>' +
+        '<div class="pr-summary-strip" id="prSummaryStrip"></div>' +
 
         // Employee cards grid
-        '<div id="prEmpGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px">' +
+        '<div id="prEmpGrid" class="pr-card-grid">' +
         '<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--tx3)">' +
         '<i class="fas fa-circle-notch fa-spin" style="font-size:24px;color:var(--P)"></i>' +
         '<div style="margin-top:10px;font-weight:600">Loading payroll data…</div></div>' +
@@ -18853,8 +18930,7 @@ function _loadSetupTasks() {
 
       // Summary strip
       if (strip) {
-        var noSalary = emps.filter(function(e){return e.basic_salary===0;}).length;
-        var cards = [
+        var noSalary = emps.filter(function(e){return e.basic_salary===0;}).length;        var cards = [
           { lbl:'Total Gross',   val:'₹'+_prFmt(summary.total_gross),       c:'var(--P)', ico:'fa-sack-dollar' },
           { lbl:'Deductions',    val:'₹'+_prFmt(summary.total_deductions),   c:'var(--R)', ico:'fa-arrow-down-wide-short' },
           { lbl:'Net Payable',   val:'₹'+_prFmt(summary.total_net),          c:'var(--G)', ico:'fa-wallet', bold:true },

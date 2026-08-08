@@ -10722,20 +10722,22 @@ function _loadSetupTasks() {
         items.map(function(t) {
           var fClr = freqColors[t.frequency] || 'var(--tx3)';
           var taskId = 'tsi_' + _esc(t.task_uid);
-          // day_label from backend: "Daily · 1:00 PM", "Monday · 10:30 AM", or old ISO "2026-03-31T18:30:00.000Z"
+          // day_label from backend: "8 Aug 2026 2:00 PM" (new), "Monday · 2:00 PM" (weekly),
+          // "8 of month · 2:00 PM" (monthly), or old ISO "2026-03-31T18:30:00.000Z"
           var rawLabel = t.day_label || '';
           var planLabel = '';
           if (rawLabel) {
-            // Old format: ISO datetime string from un-fixed Day/Date column
-            if (rawLabel.indexOf('T') > 0 || rawLabel.match(/^\d{4}-\d{2}-\d{2}/)) {
+            // Old ISO format — extract time only
+            if (rawLabel.indexOf('T') > 0 && rawLabel.match(/^\d{4}-\d{2}-\d{2}T/)) {
               var pdOld = _parseAnyDate(rawLabel);
               if (pdOld && !isNaN(pdOld)) {
-                var ph = pdOld.getHours(), pm = pdOld.getMinutes();
-                planLabel = (ph % 12 || 12) + ':' + (pm < 10 ? '0' : '') + pm + (ph >= 12 ? ' PM' : ' AM');
+                var ph = pdOld.getHours(), pm2 = pdOld.getMinutes();
+                planLabel = (ph % 12 || 12) + ':' + (pm2 < 10 ? '0' : '') + pm2 + (ph >= 12 ? ' PM' : ' AM');
               }
+            } else {
+              // All other formats: "8 Aug 2026 2:00 PM", "Monday · 2:00 PM" — show as-is
+              planLabel = rawLabel;
             }
-            // "Daily · 1:00 PM" or "Monday · 10:30 AM" — show as-is (already clean)
-            else { planLabel = rawLabel; }
           }
           planLabel = planLabel ? _esc(planLabel) : '';
           return '<div style="border:1px solid var(--bdr);border-radius:8px;margin-bottom:4px;background:var(--bg);overflow:hidden">' +

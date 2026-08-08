@@ -21,6 +21,8 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js" defer></script>
   <!-- ── App Config: GAS_URL aur constants — sirf yahan change karo ── -->
   <script src="appconfig.js"></script>
+  <!-- ── App Core: GAS bridge + date/string utilities ── -->
+  <script src="app.js"></script>
   <!-- Early session check: prevents login screen flash when valid session exists -->
   <script>
     (function(){
@@ -10093,60 +10095,54 @@ function _gasX(fn, args, timeout, onOk, onErr) {
       list.innerHTML = html;
     }
 
-    /* ── Smart timestamp formatter: "Today 10:30", "Yesterday 14:05", "27 Jun 09:00" ── */
+    /* ── Smart timestamp formatter: "Today 10:30 AM", "Yesterday 2:05 PM", "27 Jun 9:00 AM" ──
+       Uses _parseAnyDate so ALL formats work: ISO, dd/MM/yyyy, "Apr 01 2026 GMT+0530", etc. */
     function _tsShort(ts) {
       if (!ts) return '';
       var s = String(ts).trim();
-      if (s === '-' || s === 'undefined' || s === 'null') return '—';
+      if (s === '-' || s === 'undefined' || s === 'null' || s === '') return '—';
 
-      // Handle raw JS Date.toString() format: "Apr 01 2026 00:00:00 GMT+0530 (India Standard Time)"
-      // or "Mon Apr 01 2026 00:00:00 GMT+0530"
-      var gmtMatch = s.match(/([A-Za-z]{3})\s+(\d{1,2})\s+(\d{4})\s+(\d{2}:\d{2})/);
-      if (gmtMatch) {
-        var months = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
-        var mo = months[gmtMatch[1]], dy = parseInt(gmtMatch[2]), yr = parseInt(gmtMatch[3]);
-        var hhmm = gmtMatch[4];
-        var today0 = new Date(); today0.setHours(0,0,0,0);
-        var dt0 = new Date(yr, mo, dy);
-        var yest0 = new Date(today0); yest0.setDate(today0.getDate()-1);
-        var mn = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-        var prefix = dt0.getTime()===today0.getTime() ? 'Today' : dt0.getTime()===yest0.getTime() ? 'Yesterday' : dy+' '+mn[mo]+(yr!==today0.getFullYear()?' '+yr:'');
-        return hhmm && hhmm!=='00:00' ? prefix + ' ' + hhmm : prefix;
+      var d = _parseAnyDate(s);
+      if (!d || isNaN(d.getTime())) return s.substring(0, 16);
+
+      // Extract time from the original string (not from Date object to avoid TZ shifts)
+      var hhmm = '';
+      // "dd/MM/yyyy HH:mm" or "yyyy-MM-dd HH:mm"
+      var spaceIdx = s.search(/\s+\d{2}:\d{2}/);
+      if (spaceIdx > -1) {
+        hhmm = s.substring(spaceIdx).trim().substring(0, 5);
+      }
+      // ISO "T14:30"
+      var tIdx = s.indexOf('T');
+      if (!hhmm && tIdx > 0) hhmm = s.substring(tIdx + 1, tIdx + 6);
+      // GMT match "00:00" from "Apr 01 2026 14:30:00 GMT..."
+      if (!hhmm) {
+        var gm = s.match(/(\d{2}:\d{2}):\d{2}\s*(?:GMT|$)/);
+        if (gm) hhmm = gm[1];
       }
 
-      // Handle ISO 8601 with T: "2026-08-10T14:30:00"
-      if (s.indexOf('T') > -1) {
-        var isoDate = s.substring(0,10);
-        var isoTime = s.substring(11,16);
-        return _tsShort(isoDate + (isoTime ? ' ' + isoTime + ':00' : ' 00:00:00'));
+      // Convert HH:mm → h:mm AM/PM
+      function _to12(hm) {
+        if (!hm || hm === '00:00') return '';
+        var p = hm.split(':'), h = parseInt(p[0], 10), m = parseInt(p[1], 10);
+        var ampm = h >= 12 ? 'PM' : 'AM';
+        var h12 = h % 12 || 12;
+        return h12 + ':' + (m < 10 ? '0' : '') + m + ' ' + ampm;
       }
+      var timeStr = _to12(hhmm);
 
-      // Original format: "dd-MM-yyyy HH:mm:ss" or "yyyy-MM-dd HH:mm:ss"
-      try {
-        var parts = s.split(' ');
-        var datePart = parts[0] || '', timePart = parts[1] || '';
-        var hhmm2 = timePart.substring(0,5);
-        var d2;
-        if (datePart.includes('-')) {
-          var dp = datePart.split('-');
-          if (dp[0].length === 4) {
-            d2 = new Date(parseInt(dp[0]), parseInt(dp[1])-1, parseInt(dp[2]));
-          } else {
-            d2 = new Date(parseInt(dp[2]), parseInt(dp[1])-1, parseInt(dp[0]));
-          }
-        }
-        if (!d2 || isNaN(d2)) return s.substring(0,16);
-        var today2 = new Date(); today2.setHours(0,0,0,0);
-        var yesterday2 = new Date(today2); yesterday2.setDate(today2.getDate()-1);
-        var t2 = new Date(d2); t2.setHours(0,0,0,0);
-        var months2 = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-        var lbl;
-        if (t2.getTime() === today2.getTime())     lbl = 'Today';
-        else if (t2.getTime() === yesterday2.getTime()) lbl = 'Yesterday';
-        else lbl = d2.getDate() + ' ' + months2[d2.getMonth()] + (d2.getFullYear() !== today2.getFullYear() ? ' ' + d2.getFullYear() : '');
-        return hhmm2 && hhmm2 !== '00:00' ? lbl + ' ' + hhmm2 : lbl;
-      } catch(e2) { return s.substring(0,16); }
-      }
+      var today0 = new Date(); today0.setHours(0,0,0,0);
+      var yest0  = new Date(today0); yest0.setDate(today0.getDate() - 1);
+      var d0     = new Date(d); d0.setHours(0,0,0,0);
+      var mn = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+      var prefix;
+      if (d0.getTime() === today0.getTime())    prefix = 'Today';
+      else if (d0.getTime() === yest0.getTime()) prefix = 'Yesterday';
+      else prefix = d.getDate() + ' ' + mn[d.getMonth()] + (d.getFullYear() !== today0.getFullYear() ? ' ' + d.getFullYear() : '');
+
+      return timeStr ? prefix + ' ' + timeStr : prefix;
+    }
 
     function _cmtTransfer(el) {
       var row = el.closest('[data-row]');
@@ -11506,9 +11502,11 @@ function _loadSetupTasks() {
                 (isOut ?
                   '<span><i class="fas fa-user-check"></i> To: <strong>' + _esc(d.delegated_to_name || d.delegated_to) + '</strong></span>' :
                   '<span><i class="fas fa-user"></i> By: <strong>' + _esc(d.delegated_by_name || d.delegated_by) + '</strong></span>') +
-                '<span><i class="fas fa-calendar-plus"></i> ' + _fmtDate(d.first_date) + '</span>' +
-                '<span><i class="fas fa-flag-checkered"></i> ' + _fmtDate(d.final_date) + '</span>' +
-                (d.status !== 'Completed' ? '<span>' + dlTxt + '</span>' : '') +
+                '<span style="color:var(--P);font-weight:700"><i class="fas fa-calendar-clock" style="color:var(--P)"></i> <strong>Plan Date:</strong> ' + _fmtDate(d.first_date) + '</span>' +
+                '<span style="color:var(--O);font-weight:700"><i class="fas fa-flag-checkered" style="color:var(--O)"></i> <strong>Due:</strong> ' + _fmtDate(d.final_date) + '</span>' +
+                (d.status === 'Completed' && (d.completed_at || d.updated_at)
+                  ? '<span style="color:var(--G);font-weight:700"><i class="fas fa-check-circle" style="color:var(--G)"></i> <strong>Actual:</strong> ' + _tsShort(d.completed_at || d.updated_at) + '</span>'
+                  : (d.status !== 'Completed' ? '<span>' + dlTxt + '</span>' : '')) +
                 (d.revision_1 ? '<span style="color:var(--V)"><i class="fas fa-calendar-days"></i> Rev1: ' + _fmtDate(d.revision_1) + '</span>' : '') +
                 (d.revision_2 ? '<span style="color:var(--V)"><i class="fas fa-calendar-days"></i> Rev2: ' + _fmtDate(d.revision_2) + '</span>' : '') +
                 (d.completion_remarks || d.remarks ? '<div style="margin-top:6px;padding:6px 10px;background:var(--Il);border-radius:6px;font-size:11px;color:var(--I);display:flex;align-items:flex-start;gap:6px"><i class="fas fa-comment-dots" style="margin-top:1px;flex-shrink:0"></i><span>' + _esc(d.completion_remarks || d.remarks) + '</span></div>' : '') +
@@ -12735,7 +12733,10 @@ function _loadSetupTasks() {
       if (!recs.length) { tblEl.innerHTML = '<div class="te"><i class="fas fa-calendar-times"></i> No attendance records for ' + month + '</div>'; return; }
       tblEl.innerHTML =
         '<div class="table-card"><div class="tw"><table><thead><tr>' +
-        '<th>Date</th><th>Day</th><th>In</th><th>Out</th><th>Hours</th><th>Status</th>' +
+        '<th>Date</th><th>Day</th>' +
+        '<th style="color:var(--P)"><i class="fas fa-calendar-clock"></i> Plan IN</th>' +
+        '<th style="color:var(--G)"><i class="fas fa-check-circle"></i> Actual OUT</th>' +
+        '<th>Hours</th><th>Status</th>' +
         '</tr></thead><tbody>' +
         recs.map(function(r) {
           var stBg  = (r.status==='Present') ? 'var(--Gl)' : (r.status==='Absent') ? 'var(--Rl)' : (r.status==='Half Day') ? 'var(--Ol)' : (r.status==='Holiday') ? '#e0e7ff' : 'var(--sur2)';
@@ -16881,7 +16882,10 @@ function _loadSetupTasks() {
       if (empDetail) {
         h += '<div class="card card-nohover card-sm" style="margin-bottom:16px">' +
           '<div class="sec-title" style="margin-bottom:12px"><i class="fas fa-user" style="color:var(--P)"></i> '+_esc(empDetail.name)+' &mdash; Daily Log <span style="color:var(--tx3);font-weight:600">('+_esc(empDetail.dept)+')</span></div>' +
-          '<div class="tw"><table><thead><tr><th>Date</th><th>Status</th><th>Punctuality</th><th>Check In</th><th>Check Out</th><th>Hours</th></tr></thead><tbody>' +
+          '<div class="tw"><table><thead><tr><th>Date</th><th>Status</th><th>Punctuality</th>' +
+          '<th style="color:var(--P)"><i class="fas fa-calendar-clock"></i> Plan IN</th>' +
+          '<th style="color:var(--G)"><i class="fas fa-check-circle"></i> Actual OUT</th>' +
+          '<th>Hours</th></tr></thead><tbody>' +
           (empDetail.log.length ? empDetail.log.map(function (r) {
             // Sanitise office_in_used — when served from cache, _extractTimeStr
             // may not have run (the value arrives as an ISO string). Strip it
@@ -17344,9 +17348,9 @@ function _loadSetupTasks() {
             '<thead><tr style="background:var(--sur2)">' +
             '<th style="padding:8px 10px 8px 24px;font-size:10px;font-weight:800;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px;text-align:left;min-width:160px">Employee</th>' +
             '<th style="padding:8px 10px;font-size:10px;font-weight:800;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px;text-align:left">Dept</th>' +
-            '<th style="padding:8px 10px;font-size:10px;font-weight:800;color:var(--G);text-transform:uppercase;letter-spacing:.4px;text-align:center;width:70px">In</th>' +
-            '<th style="padding:8px 10px;font-size:10px;font-weight:800;color:var(--R);text-transform:uppercase;letter-spacing:.4px;text-align:center;width:70px">Out</th>' +
-            '<th style="padding:8px 10px;font-size:10px;font-weight:800;color:var(--P);text-transform:uppercase;letter-spacing:.4px;text-align:center;width:70px">Hrs</th>' +
+            '<th style="padding:8px 10px;font-size:10px;font-weight:800;color:var(--P);text-transform:uppercase;letter-spacing:.4px;text-align:center;width:80px"><i class="fas fa-calendar-clock"></i> Plan IN</th>' +
+            '<th style="padding:8px 10px;font-size:10px;font-weight:800;color:var(--G);text-transform:uppercase;letter-spacing:.4px;text-align:center;width:80px"><i class="fas fa-check-circle"></i> Actual OUT</th>' +
+            '<th style="padding:8px 10px;font-size:10px;font-weight:800;color:var(--T);text-transform:uppercase;letter-spacing:.4px;text-align:center;width:70px">Hrs</th>' +
             '<th style="padding:8px 16px;font-size:10px;font-weight:800;color:var(--tx3);text-transform:uppercase;letter-spacing:.4px;text-align:center;width:100px">Status</th>' +
             '</tr></thead><tbody>' +
             dRecs.map(function(r,ri){
@@ -19980,7 +19984,8 @@ function _loadSetupTasks() {
       var csv = lines.join('\n');
       var a = document.createElement('a');
       a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
-      a.download = 'salary_card_' + emp.emp_id + '_' + month + '.csv';
+      var safeName = (emp.emp_name || emp.name || emp.emp_id || 'employee').replace(/[^a-zA-Z0-9_\-]/g, '_');
+      a.download = 'salary_card_' + safeName + '_' + month + '.csv';
       a.click();
       _toast('Salary card downloaded!', 'ok');
     }

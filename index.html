@@ -5168,7 +5168,7 @@
     .ss-inp{width:100%;cursor:pointer;background:var(--sur)!important;caret-color:transparent;user-select:none}
     .ss-inp.ss-open{border-color:var(--P)!important;box-shadow:0 0 0 3px rgba(99,102,241,.15)}
     .ss-arr{position:absolute;right:12px;top:50%;transform:translateY(-50%);color:var(--tx3);pointer-events:none;font-size:11px;transition:transform .2s}
-    .ss-list{position:absolute;top:calc(100% + 4px);left:0;min-width:max(100%,180px);z-index:9999;background:var(--sur);border:1px solid var(--bdr2);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.18);display:none;flex-direction:column;max-height:280px;overflow:hidden}
+    .ss-list{position:absolute;top:calc(100% + 4px);left:0;min-width:180px;z-index:9999;background:var(--sur);border:1px solid var(--bdr2);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.18);display:none;flex-direction:column;max-height:280px;overflow:hidden}
     .ss-list.ss-open{display:flex}
     .ss-sw{padding:8px;border-bottom:1px solid var(--bdr);flex-shrink:0}
     .ss-si{width:100%;padding:7px 10px;border:1px solid var(--bdr);border-radius:8px;background:var(--bg);font-size:13px;color:var(--tx);outline:none}
@@ -7971,12 +7971,14 @@
       function _ssPosition(list, wrap) {
         var rect = wrap.getBoundingClientRect();
         var wW = window.innerWidth, wH = window.innerHeight;
-        var dW = Math.min(Math.max(rect.width, 200), wW - 16);
+        var dW = Math.min(Math.max(rect.width, 180), wW - 16);
         var lft = Math.max(4, Math.min(rect.left, wW - dW - 4));
         var spB = wH - rect.bottom - 6, spA = rect.top - 6;
         var above = spB < 200 && spA > spB;
-        list.style.left  = lft + 'px';
-        list.style.width = dW + 'px';
+        list.style.right    = 'auto';
+        list.style.minWidth = '0';
+        list.style.left     = lft + 'px';
+        list.style.width    = dW  + 'px';
         if (above) {
           list.style.top    = 'auto';
           list.style.bottom = (wH - rect.top + 4) + 'px';
@@ -8042,17 +8044,22 @@
             var t = _ssGetTheme();
             var r0 = w.getBoundingClientRect();
             var wW = window.innerWidth, wH = window.innerHeight;
-            var dW = Math.min(Math.max(r0.width, 200), wW - 16);
+            // Width: match the select width minimum, cap at viewport
+            // Don't use min 200px as override — use actual select width or content
+            var minW = Math.max(r0.width, 160);
+            var dW = Math.min(minW, wW - 16);
             var lft = Math.max(4, Math.min(r0.left, wW - dW - 4));
             var spB = wH - r0.bottom - 6, spA = r0.top - 6;
             var above = spB < 200 && spA > spB;
             list.style.cssText =
               'position:fixed!important;' +
               'left:' + lft + 'px;' +
+              'right:auto;' +
               (above
                 ? 'bottom:' + (wH - r0.top + 4) + 'px;top:auto;'
                 : 'top:' + (r0.bottom + 4) + 'px;bottom:auto;') +
               'width:' + dW + 'px;' +
+              'min-width:0;' +
               'z-index:2147483647;' +
               'background:' + t.bg + ';' +
               'border:1.5px solid ' + t.bdr + ';' +

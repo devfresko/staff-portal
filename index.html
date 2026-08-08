@@ -4084,7 +4084,7 @@
       border-radius: 20px;
       padding: 0;
       width: 92%;
-      max-width: 520px;
+      max-width: 580px;
       max-height: 88svh;
       box-shadow: 0 8px 40px rgba(0,0,0,.25);
       display: flex;
@@ -4118,9 +4118,9 @@
 
     .modal-body {
       color: var(--tx);
-      padding: 20px 28px;
+      padding: 20px 24px;
       overflow-y: auto;
-      overflow-x: auto;
+      overflow-x: hidden;
       flex: 1;
       min-height: 0;
     }
@@ -7970,20 +7970,19 @@
 
       function _ssPosition(list, wrap) {
         var rect = wrap.getBoundingClientRect();
-        var winH = window.innerHeight;
-        var listH = Math.min(280, list.scrollHeight || 280);
-        // Open below or above depending on available space
-        var spaceBelow = winH - rect.bottom - 8;
-        var spaceAbove = rect.top - 8;
-        var openAbove = spaceBelow < listH && spaceAbove > spaceBelow;
-        list.style.left = Math.max(4, rect.left) + 'px';
-        list.style.width = Math.max(rect.width, 200) + 'px';
-        if (openAbove) {
-          list.style.top = '';
-          list.style.bottom = (winH - rect.top + 4) + 'px';
+        var wW = window.innerWidth, wH = window.innerHeight;
+        var dW = Math.min(Math.max(rect.width, 200), wW - 16);
+        var lft = Math.max(4, Math.min(rect.left, wW - dW - 4));
+        var spB = wH - rect.bottom - 6, spA = rect.top - 6;
+        var above = spB < 200 && spA > spB;
+        list.style.left  = lft + 'px';
+        list.style.width = dW + 'px';
+        if (above) {
+          list.style.top    = 'auto';
+          list.style.bottom = (wH - rect.top + 4) + 'px';
         } else {
-          list.style.bottom = '';
-          list.style.top = (rect.bottom + 4) + 'px';
+          list.style.bottom = 'auto';
+          list.style.top    = (rect.bottom + 4) + 'px';
         }
       }
 
@@ -8037,20 +8036,31 @@
           var wasOpen = (_ssPortal === list);
           closePortal();
           if (!wasOpen) {
-            // Portal: detach from ss-wrap, append to body
+            // Portal: calculate position first, then append — no layout flash
             _ssOriginParent = list.parentNode;
             _ssOriginNext   = list.nextSibling;
             var t = _ssGetTheme();
+            var r0 = w.getBoundingClientRect();
+            var wW = window.innerWidth, wH = window.innerHeight;
+            var dW = Math.min(Math.max(r0.width, 200), wW - 16);
+            var lft = Math.max(4, Math.min(r0.left, wW - dW - 4));
+            var spB = wH - r0.bottom - 6, spA = r0.top - 6;
+            var above = spB < 200 && spA > spB;
             list.style.cssText =
-              'position:fixed;z-index:2147483647;' +
+              'position:fixed!important;' +
+              'left:' + lft + 'px;' +
+              (above
+                ? 'bottom:' + (wH - r0.top + 4) + 'px;top:auto;'
+                : 'top:' + (r0.bottom + 4) + 'px;bottom:auto;') +
+              'width:' + dW + 'px;' +
+              'z-index:2147483647;' +
               'background:' + t.bg + ';' +
               'border:1.5px solid ' + t.bdr + ';' +
               'border-radius:12px;' +
               'box-shadow:0 10px 40px rgba(0,0,0,.18);' +
-              'display:flex;flex-direction:column;' +
+              'display:flex!important;flex-direction:column;' +
               'max-height:300px;overflow:hidden';
             document.body.appendChild(list);
-            _ssPosition(list, w);
             list.classList.add('ss-open');
             inp.classList.add('ss-open');
             _ssPortal     = list;
@@ -19395,53 +19405,75 @@ function _loadSetupTasks() {
       }
 
       var hasSalary = emp.basic_salary > 0;
-      var salaryHtml = hasSalary
-        ? // Responsive grid: 2 columns on desktop, 1 on mobile
-          '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:16px">' +
-
-          // Earnings
-          '<div style="background:var(--sur2);border-radius:10px;padding:14px;border:1px solid var(--bdr)">' +
-          '<div style="font-size:10px;font-weight:800;color:var(--G);text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:5px">' +
-          '<i class="fas fa-arrow-up-right-dots"></i> Earnings</div>' +
-          '<table style="width:100%;border-collapse:collapse">' +
-          srow('Basic Salary', emp.basic_salary) +
-          srow('HRA', emp.hra) +
-          srow('Conveyance', emp.conveyance) +
-          srow('Other Allow.', emp.other_allowances) +
-          '<tr style="border-top:1.5px solid var(--bdr)">' +
-          '<td style="padding:8px 12px;font-weight:800;font-size:13px;color:var(--G)">Gross</td>' +
-          '<td style="padding:8px 12px;font-weight:900;text-align:right;color:var(--G);font-size:16px">₹'+_prFmt(emp.gross_salary)+'</td></tr>' +
-          '</table></div>' +
-
-          // Deductions
-          '<div style="background:var(--sur2);border-radius:10px;padding:14px;border:1px solid var(--bdr)">' +
-          '<div style="font-size:10px;font-weight:800;color:var(--R);text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:5px">' +
-          '<i class="fas fa-arrow-down-wide-short"></i> Deductions</div>' +
-          '<table style="width:100%;border-collapse:collapse">' +
-          srow('PF', emp.pf_deduction, 'var(--R)') +
-          srow('ESI', emp.esi_deduction, 'var(--R)') +
-          srow('TDS', emp.tds, 'var(--R)') +
-          srow('Other', emp.other_deductions, 'var(--R)') +
-          (emp.lwp_days > 0 ? srow('LWP ('+emp.lwp_days+'d × ₹'+_prFmt(emp.per_day_salary)+')', emp.lwp_deduction, 'var(--R)') : '') +
-          '<tr style="border-top:1.5px solid var(--bdr)">' +
-          '<td style="padding:8px 12px;font-weight:800;font-size:13px;color:var(--R)">Total Ded.</td>' +
-          '<td style="padding:8px 12px;font-weight:900;text-align:right;color:var(--R);font-size:16px">₹'+_prFmt(emp.total_deductions)+'</td></tr>' +
-          '</table></div>' +
-          '</div>' +
-
-          // Net Pay banner
-          '<div style="background:linear-gradient(135deg,var(--G),#059669);border-radius:12px;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;color:#fff">' +
-          '<div>' +
-          '<div style="font-size:10px;opacity:.8;text-transform:uppercase;font-weight:800;margin-bottom:2px">Net Salary Payable</div>' +
-          '<div style="font-size:11px;opacity:.7">'+monthLbl+' · '+emp.payable_days+' payable days</div>' +
-          '</div>' +
-          '<div style="font-size:28px;font-weight:900">₹'+_prFmt(emp.net_salary)+'</div>' +
-          '</div>'
-        : '<div style="padding:20px;text-align:center;background:var(--sur2);border-radius:10px;color:var(--O)">' +
+      var salaryHtml = !hasSalary
+        ? '<div style="padding:20px;text-align:center;background:var(--sur2);border-radius:10px;color:var(--O)">' +
           '<i class="fas fa-triangle-exclamation" style="font-size:24px;margin-bottom:8px;display:block"></i>' +
           '<div style="font-weight:700">Salary not configured in Doer List</div>' +
           '<div style="font-size:11px;color:var(--tx3);margin-top:4px">Doer List mein Basic Salary, HRA, PF etc. columns add karo</div>' +
-          '</div>';
+          '</div>'
+        : (function() {
+            // Single compact salary table — works at any width
+            function row(lbl, amt, c, bold) {
+              return '<tr>' +
+                '<td style="padding:6px 10px;font-size:12px;color:'+(bold?'var(--tx)':'var(--tx2)') +
+                  ';font-weight:'+(bold?'800':'500')+'">'+ lbl+'</td>' +
+                '<td style="padding:6px 10px;font-size:12px;font-weight:'+(bold?'900':'600') +
+                  ';text-align:right;color:'+(c||'var(--tx)')+'">₹'+_prFmt(amt)+'</td>' +
+                '</tr>';
+            }
+            var lwpRow = emp.lwp_days > 0
+              ? row('LWP ('+emp.lwp_days+'d × ₹'+_prFmt(emp.per_day_salary)+')', emp.lwp_deduction, 'var(--R)')
+              : '';
+
+            return '' +
+              // Compact two-column overview row
+              '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px">' +
+              '<div style="background:var(--Gl);border-radius:8px;padding:10px;text-align:center">' +
+              '<div style="font-size:9px;font-weight:800;color:var(--G);text-transform:uppercase">Gross</div>' +
+              '<div style="font-size:16px;font-weight:900;color:var(--G)">₹'+_prFmt(emp.gross_salary)+'</div></div>' +
+              '<div style="background:var(--Rl);border-radius:8px;padding:10px;text-align:center">' +
+              '<div style="font-size:9px;font-weight:800;color:var(--R);text-transform:uppercase">Deductions</div>' +
+              '<div style="font-size:16px;font-weight:900;color:var(--R)">₹'+_prFmt(emp.total_deductions)+'</div></div>' +
+              '<div style="background:linear-gradient(135deg,var(--G),#059669);border-radius:8px;padding:10px;text-align:center">' +
+              '<div style="font-size:9px;font-weight:800;color:#fff;opacity:.8;text-transform:uppercase">Net Pay</div>' +
+              '<div style="font-size:18px;font-weight:900;color:#fff">₹'+_prFmt(emp.net_salary)+'</div></div>' +
+              '</div>' +
+
+              // Earnings + Deductions in one table with section headers
+              '<div style="border:1px solid var(--bdr);border-radius:10px;overflow:hidden">' +
+              '<table style="width:100%;border-collapse:collapse">' +
+
+              // Earnings section header
+              '<tr style="background:var(--Gl)">' +
+              '<td colspan="2" style="padding:7px 10px;font-size:10px;font-weight:800;color:var(--G);text-transform:uppercase;letter-spacing:.5px">' +
+              '<i class="fas fa-arrow-up-right-dots"></i> Earnings</td></tr>' +
+              row('Basic Salary', emp.basic_salary) +
+              (emp.hra>0 ? row('HRA', emp.hra) : '') +
+              (emp.conveyance>0 ? row('Conveyance', emp.conveyance) : '') +
+              (emp.other_allowances>0 ? row('Other Allowances', emp.other_allowances) : '') +
+              row('Gross Total', emp.gross_salary, 'var(--G)', true) +
+
+              // Deductions section header
+              '<tr style="background:var(--Rl)">' +
+              '<td colspan="2" style="padding:7px 10px;font-size:10px;font-weight:800;color:var(--R);text-transform:uppercase;letter-spacing:.5px">' +
+              '<i class="fas fa-arrow-down-wide-short"></i> Deductions</td></tr>' +
+              (emp.pf_deduction>0 ? row('PF', emp.pf_deduction, 'var(--R)') : '') +
+              (emp.esi_deduction>0 ? row('ESI', emp.esi_deduction, 'var(--R)') : '') +
+              (emp.tds>0 ? row('TDS', emp.tds, 'var(--R)') : '') +
+              (emp.other_deductions>0 ? row('Other', emp.other_deductions, 'var(--R)') : '') +
+              lwpRow +
+              row('Total Deductions', emp.total_deductions, 'var(--R)', true) +
+
+              '</table></div>' +
+
+              // Net pay footer
+              '<div style="margin-top:12px;background:linear-gradient(135deg,var(--G),#059669);border-radius:10px;padding:14px 18px;display:flex;justify-content:space-between;align-items:center">' +
+              '<div><div style="font-size:9px;color:#fff;opacity:.8;text-transform:uppercase;font-weight:800">Net Salary Payable</div>' +
+              '<div style="font-size:11px;color:#fff;opacity:.7">'+monthLbl+' · '+emp.payable_days+' days</div></div>' +
+              '<div style="font-size:24px;font-weight:900;color:#fff">₹'+_prFmt(emp.net_salary)+'</div>' +
+              '</div>';
+          })();
+
 
       // ── Tabbed modal content ──────────────────────────────────────────────
       var body =

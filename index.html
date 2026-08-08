@@ -10056,7 +10056,13 @@ function _gasX(fn, args, timeout, onOk, onErr) {
           var isTransOut = t.is_transferred;
           var rowBg      = ti%2===0?'var(--bg)':'var(--sur2)';
           var actualFmt  = t.actual ? _tsShort(t.actual) : '';
-          var planFmt    = t.scheduled_time || '';
+          // Plan = planned date + scheduled_time combined: "8 Aug 2026 11:00 AM"
+          var planFmt = '';
+          if (t.scheduled_time && t.planned) {
+            planFmt = _fmtDate(t.planned) + ' ' + t.scheduled_time;
+          } else if (t.scheduled_time) {
+            planFmt = t.scheduled_time;
+          }
           var transFmt   = t.transferred_at ? _tsShort(t.transferred_at) : '';
           var rowId      = 'cmtrow_' + t.row_num + '_' + Math.random().toString(36).slice(2,7);
           return '<div id="'+rowId+'" data-row="'+t.row_num+'" data-occ="'+t.occ+'" data-uid="'+_esc(t.task_uid||'')+'" data-planned="'+_esc(t.planned||'')+'" data-name="'+_esc(t.task_name||'')+'" data-emp="'+_esc(emp.emp_id)+'" data-empname="'+_esc(emp.name)+'" data-dt="'+_cmtDate+'" style="display:flex;align-items:center;gap:10px;padding:9px 14px 9px 60px;background:'+rowBg+';border-top:'+(ti>0?'1px solid var(--bdr)':'none')+'">' +
@@ -11504,7 +11510,7 @@ function _loadSetupTasks() {
                 (isOut ?
                   '<span><i class="fas fa-user-check"></i> To: <strong>' + _esc(d.delegated_to_name || d.delegated_to) + '</strong></span>' :
                   '<span><i class="fas fa-user"></i> By: <strong>' + _esc(d.delegated_by_name || d.delegated_by) + '</strong></span>') +
-                '<span style="color:var(--P);font-weight:700"><i class="fas fa-calendar-plus" style="color:var(--P)"></i> <strong>Assigned:</strong> ' + _fmtDate(d.first_date) + '</span>' +
+                '<span style="color:var(--P);font-weight:700"><i class="fas fa-calendar-plus" style="color:var(--P)"></i> <strong>Assigned:</strong> ' + (d.assigned_at ? _fmtDateTime(d.assigned_at) : _fmtDate(d.first_date)) + '</span>' +
                 '<span style="color:var(--O);font-weight:700"><i class="fas fa-flag-checkered" style="color:var(--O)"></i> <strong>Due:</strong> ' + _fmtDate(d.final_date) + '</span>' +
                 (d.status === 'Completed' && d.completed_at
                   ? '<span style="color:var(--G);font-weight:700"><i class="fas fa-check-circle" style="color:var(--G)"></i> <strong>Completed:</strong> ' + _fmtDate(d.completed_at) + '</span>'
@@ -18031,7 +18037,13 @@ function _loadSetupTasks() {
           var isReceived = !!(t.is_received);
           var canDo      = !isDone && !isTransOut;
           var actualFmt  = t.actual ? _tsShort(t.actual) : '';
-          var planFmt    = t.scheduled_time || '';
+          // Plan = planned date + scheduled_time: "8 Aug 2026 11:00 AM"
+          var planFmt = '';
+          if (t.scheduled_time && t.planned) {
+            planFmt = _fmtDate(t.planned) + ' ' + t.scheduled_time;
+          } else if (t.scheduled_time) {
+            planFmt = t.scheduled_time;
+          }
           var rowId = 'ckrow_' + t.row_num + '_' + Math.random().toString(36).slice(2,7);
           var sc    = _colorForStatus(t.status);
           var rowBorder = isReceived ? 'border-left:3px solid var(--V)' : '';

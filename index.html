@@ -10112,29 +10112,23 @@ function _gasX(fn, args, timeout, onOk, onErr) {
       var d = _parseAnyDate(s);
       if (!d || isNaN(d.getTime())) return s.substring(0, 16);
 
-      // Extract time from the original string (not from Date object to avoid TZ shifts)
+      // Extract time from original string
       var hhmm = '';
       // "dd/MM/yyyy HH:mm" or "yyyy-MM-dd HH:mm"
       var spaceIdx = s.search(/\s+\d{2}:\d{2}/);
-      if (spaceIdx > -1) {
-        hhmm = s.substring(spaceIdx).trim().substring(0, 5);
-      }
+      if (spaceIdx > -1) hhmm = s.substring(spaceIdx).trim().substring(0, 5);
       // ISO "T14:30"
       var tIdx = s.indexOf('T');
       if (!hhmm && tIdx > 0) hhmm = s.substring(tIdx + 1, tIdx + 6);
-      // GMT match "00:00" from "Apr 01 2026 14:30:00 GMT..."
-      if (!hhmm) {
-        var gm = s.match(/(\d{2}:\d{2}):\d{2}\s*(?:GMT|$)/);
-        if (gm) hhmm = gm[1];
-      }
+      // "Apr 01 2026 14:30:00 GMT..." or "Sat Dec 30 1899 13:00:00..."
+      if (!hhmm) { var gm2 = s.match(/\d{4}\s+(\d{2}):(\d{2})/); if(gm2) hhmm=gm2[1]+':'+gm2[2]; }
+      // Last resort: use hours from parsed Date object
+      if (!hhmm) { var hd=d.getHours(),md=d.getMinutes(); if(hd||md) hhmm=('0'+hd).slice(-2)+':'+('0'+md).slice(-2); }
 
-      // Convert HH:mm → h:mm AM/PM
       function _to12(hm) {
         if (!hm || hm === '00:00') return '';
         var p = hm.split(':'), h = parseInt(p[0], 10), m = parseInt(p[1], 10);
-        var ampm = h >= 12 ? 'PM' : 'AM';
-        var h12 = h % 12 || 12;
-        return h12 + ':' + (m < 10 ? '0' : '') + m + ' ' + ampm;
+        return (h % 12 || 12) + ':' + (m < 10 ? '0' : '') + m + (h >= 12 ? ' PM' : ' AM');
       }
       var timeStr = _to12(hhmm);
 
@@ -10143,9 +10137,11 @@ function _gasX(fn, args, timeout, onOk, onErr) {
       var d0     = new Date(d); d0.setHours(0,0,0,0);
 
       var prefix;
+      // "Sat Dec 30 1899" = time-only (no date) — show just time
+      if (d.getFullYear() === 1899) return timeStr || s.substring(0, 16);
       if (d0.getTime() === today0.getTime())    prefix = 'Today';
       else if (d0.getTime() === yest0.getTime()) prefix = 'Yesterday';
-      else prefix = d.getDate() + ' ' + _MN[d.getMonth()] + ' ' + d.getFullYear(); // always year
+      else prefix = d.getDate() + ' ' + _MN[d.getMonth()] + ' ' + d.getFullYear();
 
       return timeStr ? prefix + ' ' + timeStr : prefix;
     }
@@ -16715,7 +16711,11 @@ function _loadSetupTasks() {
       root.innerHTML = _skel(6);
       _gas('getMusterGrid', [dept || 'All', month || _currMonth()], function(res) {
         res = res || {};
-        var allRows = res.rows || [], dates = res.dates || [], hols = res.holidays || {};
+        var allRows = res.rows || [], dates = res.dates || [];
+        // res.holidays is an array of date strings — convert to lookup set
+        var holArr = res.holidays || [];
+        var hols = {};
+        holArr.forEach(function(h){ hols[h]=true; });
 
         if (!allRows.length) {
           root.innerHTML = '<div class="empty-state"><i class="fas fa-calendar-xmark"></i><h4>No Data</h4><p>No muster records for ' + month + '</p></div>';
@@ -16725,7 +16725,7 @@ function _loadSetupTasks() {
 
         // KPI strip
         var totP=0, totHD=0, totA=0, totWO=0, totHol=0;
-        allRows.forEach(function(r){ totP+=r.days_present||0; totHD+=r.days_hd||0; totA+=r.days_absent||0; totWO+=r.days_wo||0; totHol+=r.days_hol||0; });
+        allRows.forEach(function(r){ totP+=r.days_present||0; totHD+=r.days_hd||0; totA+=r.days_absent||0; totWO+=r.days_wo||0; totHol+=r.days_holiday||0; });
         var wd=totP+totHD*0.5+totA, avgPct=wd>0?Math.round((totP+totHD*0.5)/wd*100):0;
         var kpis = [
           {lbl:'Employees',val:allRows.length,c:'var(--P)',ico:'fa-users'},
@@ -16767,8 +16767,8 @@ function _loadSetupTasks() {
               '<td class="mst-emp"><div style="font-weight:700;font-size:12px">'+_esc(r.emp_name||'')+'</div><div style="font-size:10px;color:var(--tx3)">'+_esc(r.dept||'')+'</div></td>' +
               '<td class="mst-pct" style="color:'+pClr+';font-size:11px">'+pct+'%</td>' +
               dates.map(function(dt){
-                var cell=r.days&&r.days[dt]?r.days[dt]:'';
-                var c=colStatusMap[cell]||'var(--tx3)'; var lbl=colLblMap[cell]||'·';
+                var cell = r[dt] || '';  // getMusterGrid stores status directly on row object
+                var c=colStatusMap[cell]||'var(--tx4)'; var lbl=colLblMap[cell]||'·';
                 return '<td class="mst-cell" style="color:'+c+'">'+lbl+'</td>';
               }).join('') +
               '<td class="mst-cell" style="color:var(--G);font-weight:900">'+(r.days_present||0)+'</td>' +

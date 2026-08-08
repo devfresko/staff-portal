@@ -11692,8 +11692,7 @@ function _loadSetupTasks() {
       if (_isManager()) {
         tabs.push({ id: 'arega', lbl: '<i class="fas fa-clipboard-check"></i> Reg. Approvals' });
         panes.push('<div id="aregaPane">' + _aregaForm() + '</div>');
-        tabs.push({ id: 'amust', lbl: '<i class="fas fa-users"></i> Muster' });
-        panes.push('<div id="amustPane">' + _amustForm() + '</div>');
+        // Muster tab removed — now available in Attendance Analytics → Muster Grid view
       }
       if (_isMarkAttendanceAllowed()) {
         tabs.push({ id: 'amteam', lbl: '<i class="fas fa-user-check"></i> Mark Team Attendance' });
@@ -11711,7 +11710,6 @@ function _loadSetupTasks() {
       if (at === 'amy' && needsAtt) _loadMyAtt();
       else if (at === 'areg') _loadMyRegularizations();
       else if (at === 'arega' && _isManager()) _loadRegApprovals();
-      else if (at === 'amust' && _isManager()) _loadMustTab();
       else if (at === 'amteam' && _isMarkAttendanceAllowed()) _loadTeamAtt();
       if (_ST) setTimeout(function () { _switchTab(_ST); }, 30);
     }
@@ -14656,38 +14654,13 @@ function _loadSetupTasks() {
        selected department and month, with department-wise totals.
     ══════════════════════════════════════════════════════════════════════ */
     function _vMuster() {
-      if (!_isManager()) {
-        document.getElementById('content').innerHTML =
-          '<div class="empty-state"><i class="fas fa-lock"></i>' +
-          '<h4>Access Restricted</h4><p>Manager or Owner access is required to view muster reports.</p></div>';
-        return;
-      }
-
-      document.getElementById('content').innerHTML =
-        '<div class="mod-head">' +
-        '<div>' +
-        '<div class="mod-title">Muster Report</div>' +
-        '<div class="mod-sub">Monthly attendance summary — all departments</div>' +
-        '</div>' +
-        '<div class="mod-head-right">' +
-        '<label style="font-size:12px;font-weight:700;color:var(--tx2)">Month:</label>' +
-        '<input type="month" id="mstrMonth" value="' + _currMonth() + '" ' +
-        'style="padding:6px 10px;border:1.5px solid var(--bdr);border-radius:8px;font-size:12px;background:var(--bg);color:var(--tx);outline:none">' +
-        '<label style="font-size:12px;font-weight:700;color:var(--tx2)">Department:</label>' +
-        '<select id="mstrDept" style="padding:6px 10px;border:1.5px solid var(--bdr);border-radius:8px;font-size:12px;background:var(--bg);color:var(--tx);outline:none">' +
-        '<option value="All">All Departments</option>' +
-        _getDeptOptions() +
-        '</select>' +
-        '<button class="btn btn-sm" onclick="_loadMuster()"><i class="fas fa-search"></i> Load</button>' +
-
-        '</div>' +
-        '</div>' +
-        '<div id="mstrKrow" class="krow">' +
-        [1, 2, 3, 4, 5].map(function () { return '<div class="sk sk-h6" style="border-radius:14px"></div>'; }).join('') +
-        '</div>' +
-        '<div id="mstrContent">' + _skel(6) + '</div>';
-
-      _loadMuster();
+      // Muster ab Attendance Analytics mein hai (View: Muster Grid)
+      _loadV('attana');
+      // Pre-select Muster Grid view after page loads
+      setTimeout(function() {
+        var vSel = document.getElementById('attView');
+        if (vSel) { vSel.value = 'muster'; _loadAtt(); }
+      }, 300);
     }
 
     function _loadMuster() {
@@ -16631,10 +16604,6 @@ function _loadSetupTasks() {
         '<div class="mod-head">' +
         '<div><div class="mod-title">Attendance Analytics</div>' +
         '<div class="mod-sub">Presence rates, late arrivals, work hours &amp; department trends</div></div>' +
-        '<div style="display:flex;gap:6px">' +
-        '<button class="btn btn-sm btn-outline" id="attExpSummBtn" onclick="_attExportSumm()" style="display:none"><i class="fas fa-file-csv"></i> Summary</button>' +
-        '<button class="btn btn-sm btn-outline" id="attExpDetBtn"  onclick="_attExportDetail()" style="display:none"><i class="fas fa-table"></i> Full Detail</button>' +
-        '</div>' +
         '</div>' +
 
         // ── Single-row filter bar ─────────────────────────────────────────
@@ -16671,8 +16640,6 @@ function _loadSetupTasks() {
         '<option value="name_asc">Name A-Z</option></select>' +
         '<div style="flex:1;min-width:8px"></div>' +
         '<button class="btn btn-sm" onclick="_loadAtt()" style="white-space:nowrap"><i class="fas fa-chart-bar"></i> Analyze</button>' +
-        '<button class="btn btn-sm btn-outline" onclick="_attExportSumm()" style="white-space:nowrap" title="Export summary CSV"><i class="fas fa-file-csv"></i> Summary</button>' +
-        '<button class="btn btn-sm btn-outline" onclick="_attExportDetail()" style="white-space:nowrap" title="Export full detail CSV"><i class="fas fa-table"></i> Full Detail</button>' +
         '</div>' +
 
         '<div id="attRoot">' + _skel(4) + '</div>';
@@ -16778,9 +16745,6 @@ function _loadSetupTasks() {
           '</tbody></table></div>';
 
         root.innerHTML = kHtml + barHtml + tblHtml;
-        // show export buttons
-        var sb = document.getElementById('attExpSummBtn'); var db = document.getElementById('attExpDetBtn');
-        if (sb) sb.style.display = 'none'; if (db) db.style.display = 'none';
       }, function(e) {
         if (root) root.innerHTML = '<div class="te"><i class="fas fa-exclamation-triangle"></i> ' + _esc(e.message) + '</div>';
       });
@@ -16881,10 +16845,6 @@ function _loadSetupTasks() {
       _gasX('getAttendanceAnalyticsV2', [{ from: from, to: to, dept: dept, empId: emp, status: status }], 45000, function (data) {
         _D.attData = data;
         _renderAtt();
-        var sb = document.getElementById('attExpSummBtn');
-        var db = document.getElementById('attExpDetBtn');
-        if (sb) sb.style.display = '';
-        if (db) db.style.display = '';
       }, function (e) {
         if (root) root.innerHTML =
           '<div class="te"><i class="fas fa-exclamation-triangle"></i> ' + _esc(e.message) +
@@ -17775,7 +17735,7 @@ function _loadSetupTasks() {
         // Attendance — all tab IDs mapped to correct loader functions
         amy: _loadMyAtt,
         areg: _loadMyRegularizations, ala: _loadLeaveApprovals,
-        arega: _loadRegApprovals, amust: _loadMustTab, aana: _loadAttAnalytics,
+        arega: _loadRegApprovals, aana: _loadAttAnalytics,
         cmteam: _loadTeamChecklist,
         amteam: _loadTeamAtt,
         // legacy aliases kept for safety
@@ -20426,30 +20386,36 @@ function _loadSetupTasks() {
     /* Format ISO date string to "15 Jan 2026" */
     function _fmtDate(ds) {
       if (!ds) return '—';
-      var s = String(ds).substring(0, 10);
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
-      var d = new Date(s + 'T00:00:00');
-      if (isNaN(d)) return s;
-      return d.getDate() + ' ' + ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()] + ' ' + d.getFullYear();
+      try {
+        var s = String(ds).substring(0, 10);
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) { var dp=_parseAnyDate(String(ds)); if(dp){ s=dp.getFullYear()+'-'+('0'+(dp.getMonth()+1)).slice(-2)+'-'+('0'+dp.getDate()).slice(-2); } else return String(ds).substring(0,16); }
+        var d = new Date(s + 'T00:00:00'); if (isNaN(d)) return String(ds).substring(0,10);
+        var mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        return d.getDate()+' '+mn[d.getMonth()]+' '+d.getFullYear();
+      } catch(e){ return String(ds).substring(0,16); }
     }
 
-    /* Short format: "15 Jan" */
+    /* Short format: "8 Aug 2026" (always with year) */
     function _fmtDateShort(ds) {
       if (!ds) return '—';
-      var s = String(ds).substring(0, 10);
-      var d = new Date(s + 'T00:00:00');
-      if (isNaN(d)) return s;
-      return d.getDate() + ' ' + ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()];
+      try {
+        var d = _parseAnyDate ? _parseAnyDate(String(ds)) : new Date(String(ds).substring(0,10)+'T00:00:00');
+        if (!d||isNaN(d)) return String(ds).substring(0,10);
+        var mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        return d.getDate()+' '+mn[d.getMonth()]+' '+d.getFullYear();
+      } catch(e){ return String(ds).substring(0,10); }
     }
 
-    /* Format ISO datetime string to "15 Jan 2026, 14:30" */
+    /* Format to "8 Aug 2026 2:30 PM" */
     function _fmtDateTime(ds) {
       if (!ds) return '—';
-      var s = String(ds).substring(0, 19);
-      var d = new Date(s.replace(' ', 'T'));
-      if (isNaN(d)) return s.substring(0, 16);
-      return d.getDate() + ' ' + ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][d.getMonth()] +
-        ' ' + d.getFullYear() + ', ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+      try {
+        var d = _parseAnyDate ? _parseAnyDate(String(ds)) : new Date(String(ds).replace(' ','T'));
+        if (!d||isNaN(d)) return String(ds).substring(0,16);
+        var mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        var h=d.getHours(),m=d.getMinutes();
+        return d.getDate()+' '+mn[d.getMonth()]+' '+d.getFullYear()+' '+(h%12||12)+':'+(m<10?'0':'')+m+(h>=12?' PM':' AM');
+      } catch(e){ return String(ds).substring(0,16); }
     }
 
     /* Format ISO timestamp to relative "2 hours ago" */

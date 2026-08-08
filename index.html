@@ -2494,8 +2494,8 @@
 
     /* Stagger animation for list items appearing */
     @keyframes fadeSlideUp {
-      from { opacity:.1; transform: translateY(14px); }
-      to   { opacity: 1; transform: translateY(0); }
+      from { opacity: 0; }
+      to   { opacity: 1; }
     }
     
     .anim-item:nth-child(1) { animation-delay: .00s; }
@@ -6680,7 +6680,7 @@
   
 
     /* Safe keyframes — transform only, NEVER opacity:0 */
-    @keyframes mobSlideUp  { from{transform:translateY(18px) scale(.98)} to{transform:none} }
+    @keyframes mobSlideUp  { from{ opacity:0; } to{ opacity:1; } }
     @keyframes mobSlideIn  { from{transform:translateX(-14px)} to{transform:none} }
     @keyframes mobPop      { from{transform:scale(.88) translateY(6px)} 60%{transform:scale(1.03)} to{transform:none} }
     @keyframes mobFadeIn   { from{opacity:.2} to{opacity:1} }
@@ -7950,103 +7950,177 @@
 
 
     (function(){
-      function closeAll(except){
-        document.querySelectorAll('.ss-list.ss-open').forEach(function(l){
-          if(l!==except){
-            l.classList.remove('ss-open');
-            l.style.cssText = '';
-            if(l._ssScrollFn){ window.removeEventListener('scroll',l._ssScrollFn,true); delete l._ssScrollFn; }
-            var w2=l.closest('.ss-wrap');
-            if(w2){
-              var inp2=w2.querySelector('.ss-inp'); if(inp2) inp2.classList.remove('ss-open');
-              var a=w2.querySelector('.ss-arr'); if(a) a.style.transform='translateY(-50%)';
+      // ── Portal dropdown — appended to <body> so overflow/transform never clips it ──
+      var _ssPortal = null; // the currently open list element (detached from ss-wrap, lives in body)
+      var _ssActiveWrap = null; // the ss-wrap that owns the open list
+      var _ssOriginParent = null; // original parent to return list to on close
+      var _ssOriginNext   = null; // original next-sibling for correct DOM position
+
+      function _ssGetTheme() {
+        var cs = getComputedStyle(document.documentElement);
+        var bg  = cs.getPropertyValue('--sur').trim();
+        var bdr = cs.getPropertyValue('--bdr2').trim();
+        var dark= document.documentElement.classList.contains('dark') ||
+                  document.body.classList.contains('dark');
+        return {
+          bg:  bg  || (dark ? '#1e293b' : '#ffffff'),
+          bdr: bdr || (dark ? '#334155' : '#e2e8f0')
+        };
+      }
+
+      function _ssPosition(list, wrap) {
+        var rect = wrap.getBoundingClientRect();
+        var winH = window.innerHeight;
+        var listH = Math.min(280, list.scrollHeight || 280);
+        // Open below or above depending on available space
+        var spaceBelow = winH - rect.bottom - 8;
+        var spaceAbove = rect.top - 8;
+        var openAbove = spaceBelow < listH && spaceAbove > spaceBelow;
+        list.style.left = Math.max(4, rect.left) + 'px';
+        list.style.width = Math.max(rect.width, 200) + 'px';
+        if (openAbove) {
+          list.style.top = '';
+          list.style.bottom = (winH - rect.top + 4) + 'px';
+        } else {
+          list.style.bottom = '';
+          list.style.top = (rect.bottom + 4) + 'px';
+        }
+      }
+
+      function closePortal() {
+        if (_ssPortal) {
+          // Return list to original DOM position
+          _ssPortal.classList.remove('ss-open');
+          _ssPortal.style.cssText = '';
+          if (_ssPortal._ssScrollFn) {
+            window.removeEventListener('scroll', _ssPortal._ssScrollFn, true);
+            window.removeEventListener('resize', _ssPortal._ssScrollFn, true);
+            delete _ssPortal._ssScrollFn;
+          }
+          if (_ssPortal.parentNode === document.body) {
+            if (_ssOriginParent) {
+              _ssOriginParent.insertBefore(_ssPortal, _ssOriginNext);
             }
           }
-        });
+          _ssPortal = null;
+        }
+        if (_ssActiveWrap) {
+          var inp2 = _ssActiveWrap.querySelector('.ss-inp');
+          if (inp2) inp2.classList.remove('ss-open');
+          var arr2 = _ssActiveWrap.querySelector('.ss-arr');
+          if (arr2) arr2.style.transform = 'translateY(-50%)';
+          _ssActiveWrap = null;
+        }
+        _ssOriginParent = null;
+        _ssOriginNext   = null;
       }
-      function filter(list,q){
-        var ql=(q||'').toLowerCase().trim(), any=false;
-        list.querySelectorAll('.ss-opt').forEach(function(o){
-          var h=ql&&o.textContent.toLowerCase().indexOf(ql)<0;
-          o.classList.toggle('ss-hi',h); if(!h) any=true;
+
+      function filter(list, q) {
+        var ql = (q || '').toLowerCase().trim(), any = false;
+        list.querySelectorAll('.ss-opt').forEach(function(o) {
+          var h = ql && o.textContent.toLowerCase().indexOf(ql) < 0;
+          o.classList.toggle('ss-hi', h);
+          if (!h) any = true;
         });
-        var em=list.querySelector('.ss-none');
-        if(!any&&ql){ if(!em){em=document.createElement('div');em.className='ss-none';em.textContent='No results'; list.querySelector('.ss-opts').appendChild(em);}}
-        else if(em) em.remove();
+        var em = list.querySelector('.ss-none');
+        if (!any && ql) {
+          if (!em) { em = document.createElement('div'); em.className = 'ss-none'; em.textContent = 'No results'; list.querySelector('.ss-opts').appendChild(em); }
+        } else if (em) em.remove();
       }
-      document.addEventListener('click',function(e){
-        var inp=e.target.closest('.ss-inp');
-        if(inp){
-          var w=inp.closest('.ss-wrap'), id=w&&w.getAttribute('data-id');
-          var list=id&&document.getElementById('ssl_'+id);
-          if(!list) return;
-          var was=list.classList.contains('ss-open');
-          closeAll(null);
-          if(!was){
-            // Use position:fixed so dropdown escapes any transform stacking context
-            var rect = w.getBoundingClientRect();
-            var _ssBg = getComputedStyle(document.documentElement).getPropertyValue('--sur').trim() || '#fff';
-            var _ssBdr = getComputedStyle(document.documentElement).getPropertyValue('--bdr2').trim() || '#e2e8f0';
-            list.style.cssText = 'position:fixed!important;left:'+rect.left+'px;top:'+(rect.bottom+4)+'px;' +
-              'min-width:'+Math.max(rect.width,200)+'px;width:auto;z-index:999999!important;' +
-              'background:'+(_ssBg||'#fff')+';border:1px solid '+(_ssBdr||'#e2e8f0')+';border-radius:12px;' +
-              'box-shadow:0 8px 32px rgba(0,0,0,.2);display:flex!important;flex-direction:column;max-height:280px;overflow:hidden';
-            list.classList.add('ss-open'); inp.classList.add('ss-open');
-            var arr=w.querySelector('.ss-arr'); if(arr) arr.style.transform='translateY(-50%) rotate(180deg)';
-            var si=list.querySelector('.ss-si');
-            if(si){si.value=''; filter(list,''); setTimeout(function(){si.focus();},60);}
-            // Reposition on scroll
-            var _ssScrollFn = function(){ var r2=w.getBoundingClientRect(); list.style.top=(r2.bottom+4)+'px'; list.style.left=r2.left+'px'; };
-            list._ssScrollFn = _ssScrollFn;
-            window.addEventListener('scroll', _ssScrollFn, true);
+
+      document.addEventListener('click', function(e) {
+        var inp = e.target.closest('.ss-inp');
+        if (inp) {
+          var w = inp.closest('.ss-wrap'), id = w && w.getAttribute('data-id');
+          var list = id && document.getElementById('ssl_' + id);
+          if (!list) return;
+          var wasOpen = (_ssPortal === list);
+          closePortal();
+          if (!wasOpen) {
+            // Portal: detach from ss-wrap, append to body
+            _ssOriginParent = list.parentNode;
+            _ssOriginNext   = list.nextSibling;
+            var t = _ssGetTheme();
+            list.style.cssText =
+              'position:fixed;z-index:2147483647;' +
+              'background:' + t.bg + ';' +
+              'border:1.5px solid ' + t.bdr + ';' +
+              'border-radius:12px;' +
+              'box-shadow:0 10px 40px rgba(0,0,0,.18);' +
+              'display:flex;flex-direction:column;' +
+              'max-height:300px;overflow:hidden';
+            document.body.appendChild(list);
+            _ssPosition(list, w);
+            list.classList.add('ss-open');
+            inp.classList.add('ss-open');
+            _ssPortal     = list;
+            _ssActiveWrap = w;
+            var arr = w.querySelector('.ss-arr');
+            if (arr) arr.style.transform = 'translateY(-50%) rotate(180deg)';
+            var si = list.querySelector('.ss-si');
+            if (si) { si.value = ''; filter(list, ''); setTimeout(function(){ si.focus(); }, 60); }
+            // Reposition on scroll/resize
+            var fn = function() { _ssPosition(list, w); };
+            list._ssScrollFn = fn;
+            window.addEventListener('scroll', fn, true);
+            window.addEventListener('resize', fn, true);
           }
           e.stopPropagation(); return;
         }
-        var opt=e.target.closest('.ss-opt');
-        if(opt){
-          var list2=opt.closest('.ss-list'), w2=list2&&list2.closest('.ss-wrap');
-          if(!w2) return;
-          var id2=w2.getAttribute('data-id'), val=opt.getAttribute('data-v'), lbl=opt.textContent.trim();
-          var d=document.getElementById('ssd_'+id2);
-          if(d) d.value=lbl;
-          list2.querySelectorAll('.ss-opt').forEach(function(o){o.classList.toggle('ss-hl',o===opt);});
-          list2.classList.remove('ss-open'); if(d) d.classList.remove('ss-open');
-          var arr=w2.querySelector('.ss-arr'); if(arr) arr.style.transform='translateY(-50%)';
 
-          // Path A: _ssHtml-created wrap — named callback + hidden input
-          var cb=w2.getAttribute('data-cb');
-          if(cb){
-            var hid=document.getElementById(id2);
-            if(hid && hid.type==='hidden') hid.value=val;
-            try{window[cb]();}catch(ex){}
+        var opt = e.target.closest('.ss-opt');
+        if (opt) {
+          // Find the wrap — either via portal parent tracking or DOM
+          var w2 = _ssActiveWrap;
+          if (!w2) { var l2 = opt.closest('.ss-list'); w2 = l2 && l2.closest('.ss-wrap'); }
+          if (!w2) return;
+          var id2  = w2.getAttribute('data-id');
+          var val  = opt.getAttribute('data-v');
+          var lbl  = opt.textContent.trim();
+          var d    = document.getElementById('ssd_' + id2);
+          if (d) d.value = lbl;
+          if (_ssPortal) _ssPortal.querySelectorAll('.ss-opt').forEach(function(o){ o.classList.toggle('ss-hl', o === opt); });
+          closePortal();
+          // Update hidden select / fire callbacks
+          var cb     = w2.getAttribute('data-cb');
+          var selRef = w2.getAttribute('data-selref');
+          var cbi    = w2.getAttribute('data-cbi');
+          if (cb) {
+            var hid = document.getElementById(id2);
+            if (hid && hid.type === 'hidden') hid.value = val;
+            try { window[cb](); } catch(ex) {}
           }
-          // Path B: _initSearchSelects-created wrap — original select still in DOM
-          var selRef=w2.getAttribute('data-selref');
-          if(selRef){
-            var origSel=document.getElementById(selRef);
-            // origSel might be the hidden select OR a hidden input (from _ssHtml path)
-            if(origSel && origSel.tagName==='SELECT'){
-              origSel.value=val;
-              // Fire the original onchange so _loadEM(), _renderAtt() etc. run
-              try{ origSel.dispatchEvent(new Event('change')); }catch(ex){}
-            } else if(origSel && origSel.type==='hidden'){
-              origSel.value=val;
+          if (selRef) {
+            var origSel = document.getElementById(selRef);
+            if (origSel && origSel.tagName === 'SELECT') {
+              origSel.value = val;
+              try { origSel.dispatchEvent(new Event('change')); } catch(ex) {}
+            } else if (origSel && origSel.type === 'hidden') {
+              origSel.value = val;
             }
           }
-          // data-cbi = inline callback string fallback
-          var cbi=w2.getAttribute('data-cbi');
-          if(cbi && !cb && !selRef){ try{(new Function(cbi))();}catch(ex){} }
-
+          if (cbi && !cb && !selRef) { try { (new Function(cbi))(); } catch(ex) {} }
           e.stopPropagation(); return;
         }
-        if(!e.target.closest('.ss-wrap')) closeAll(null);
+
+        // Click outside — close
+        if (!e.target.closest('.ss-wrap') && !e.target.closest('.ss-list')) {
+          closePortal();
+        }
       });
-      document.addEventListener('input',function(e){
-        if(e.target.matches('.ss-si')){
-          var list=e.target.closest('.ss-list'); if(list) filter(list,e.target.value);
+
+      document.addEventListener('input', function(e) {
+        if (e.target.matches('.ss-si')) {
+          var list = _ssPortal || e.target.closest('.ss-list');
+          if (list) filter(list, e.target.value);
         }
+      });
+
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') closePortal();
       });
     })();
+
 
     /* ══════════════════════════════════════════════════════════
        TOAST NOTIFICATION
@@ -10412,7 +10486,9 @@ function _loadSetupTasks() {
       return;
     }
     window._tsAllTasks = allList;
-    _tsRenderFiltered();
+    _tsRenderBar(el2);
+    _tsApplyFilter();
+    setTimeout(function(){ _initSearchSelects(el2); }, 60);
   }, function(e) {
     var el2 = document.getElementById('setupTaskList');
     if (el2) el2.innerHTML = (e&&e.message&&e.message.indexOf('Network')>-1)
@@ -10420,6 +10496,169 @@ function _loadSetupTasks() {
       : '<div class="te">' + _esc(e.message) + '</div>';
   });
 }
+
+  function _tsClearFilter() {
+    var s = document.getElementById('tsSearch');
+    var e = document.getElementById('tsEmp');
+    var f = document.getElementById('tsFreq');
+    if (s) s.value = '';
+    if (e) e.value = e.options[0] ? e.options[0].value : 'all';
+    if (f) f.value = 'all';
+    // Reset ss-wrap display
+    ['tsEmp','tsFreq'].forEach(function(id) {
+      var d = document.getElementById('ssd_'+id);
+      var orig = document.getElementById(id);
+      if (d && orig && orig.options[0]) { d.value = orig.options[0].text; d.placeholder = d.value; }
+    });
+    _tsRenderFiltered();
+  }
+
+  // ── Task Setup: render filter bar once, apply filter to task groups only ──
+  function _tsRenderBar(el2) {
+    // Only render filter bar if it doesn't exist yet
+    if (el2.querySelector('#tsSearch')) return;
+    var barHtml =
+      '<div id="tsFilterBar" style="background:var(--sur2);border:1px solid var(--bdr);border-radius:10px;' +
+      'padding:10px 12px;margin-bottom:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">' +
+      '<div style="position:relative;flex:1;min-width:140px">' +
+      '<i class="fas fa-search" style="position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--tx3);font-size:11px;pointer-events:none"></i>' +
+      '<input type="text" id="tsSearch" placeholder="Search task name…" oninput="_tsApplyFilter()" ' +
+      'style="width:100%;padding:6px 10px 6px 28px;border:1.5px solid var(--bdr);border-radius:8px;' +
+      'font-size:12px;background:var(--bg);color:var(--tx);outline:none;box-sizing:border-box"></div>' +
+      '<div style="display:flex;align-items:center;gap:6px">' +
+      '<span style="font-size:10px;font-weight:800;color:var(--tx3);text-transform:uppercase;white-space:nowrap">Person</span>' +
+      '<select id="tsEmp" class="ana-sel" onchange="_tsApplyFilter()" style="min-width:130px">' +
+      '<option value="all">All Employees</option>' + _getEmpOptions() + '</select></div>' +
+      '<div style="display:flex;align-items:center;gap:6px">' +
+      '<span style="font-size:10px;font-weight:800;color:var(--tx3);text-transform:uppercase;white-space:nowrap">Freq</span>' +
+      '<select id="tsFreq" class="ana-sel" onchange="_tsApplyFilter()" style="min-width:90px">' +
+      '<option value="all">All</option><option value="D">Daily</option>' +
+      '<option value="W">Weekly</option><option value="F">Fortnightly</option>' +
+      '<option value="M">Monthly</option></select></div>' +
+      '<button class="btn btn-sm btn-outline" onclick="_tsClearFilter()" title="Clear">' +
+      '<i class="fas fa-filter-circle-xmark"></i></button>' +
+      '</div>' +
+      '<div id="tsHeaderRow" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">' +
+      '<span id="tsCountLabel" style="font-size:11px;font-weight:700;color:var(--tx2)"></span>' +
+      '<div style="display:flex;gap:6px">' +
+      '<button class="btn btn-xs btn-outline" onclick="_setupExpandAll(true)" style="min-width:44px;min-height:36px;touch-action:manipulation"><i class="fas fa-expand-alt"></i> All</button>' +
+      '<button class="btn btn-xs btn-outline" onclick="_setupExpandAll(false)" style="min-width:44px;min-height:36px;touch-action:manipulation"><i class="fas fa-compress-alt"></i> None</button>' +
+      '</div></div>' +
+      '<div id="tsTaskGroups"></div>';
+    el2.innerHTML = barHtml;
+  }
+
+  function _tsApplyFilter() {
+    var el2 = document.getElementById('setupTaskList');
+    if (!el2) return;
+    var list = window._tsAllTasks || [];
+    var q    = ((document.getElementById('tsSearch') || {}).value || '').toLowerCase().trim();
+    var emp  = (document.getElementById('tsEmp')    || {}).value || 'all';
+    var freq = (document.getElementById('tsFreq')   || {}).value || 'all';
+
+    var filtered = list.filter(function(t) {
+      if (q    && t.task_name.toLowerCase().indexOf(q) < 0) return false;
+      if (emp  !== 'all' && t.emp_id !== emp)               return false;
+      if (freq !== 'all' && (t.frequency||'').charAt(0).toUpperCase() !== freq) return false;
+      return true;
+    });
+
+    var deptMap = {};
+    filtered.forEach(function(t) {
+      var d = t.dept || 'Other';
+      if (!deptMap[d]) deptMap[d] = [];
+      deptMap[d].push(t);
+    });
+    var depts = Object.keys(deptMap).sort();
+    var freqColors = { D:'var(--P)',W:'var(--V)',F:'var(--V)',M:'var(--O)','2M':'var(--O)',Q:'var(--O)' };
+
+    var lbl = document.getElementById('tsCountLabel');
+    if (lbl) lbl.innerHTML = '<i class="fas fa-layer-group"></i> ' + filtered.length + ' tasks · ' + depts.length + ' depts' +
+      (filtered.length < list.length ? ' <span style="color:var(--tx3)">(filtered from ' + list.length + ')</span>' : '');
+
+    var grpEl = document.getElementById('tsTaskGroups');
+    if (!grpEl) return;
+
+    if (!filtered.length) {
+      grpEl.innerHTML = '<div style="text-align:center;padding:24px;color:var(--tx3)"><i class="fas fa-filter-circle-xmark" style="font-size:24px;margin-bottom:8px;display:block"></i>No tasks match filters</div>';
+      return;
+    }
+
+    grpEl.innerHTML = depts.map(function(dept) {
+      var items = deptMap[dept];
+      var gid   = 'stg_' + dept.replace(/[^a-zA-Z0-9]/g,'_');
+      return '<div style="margin-bottom:10px">' +
+        '<div class="ts-dept-hd" data-gid="' + _esc(gid) + '" style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--sur2);border-radius:8px;margin-bottom:6px;cursor:pointer">' +
+        '<i class="fas fa-building" style="color:var(--P);font-size:11px"></i>' +
+        '<span style="font-size:11px;font-weight:800;color:var(--tx)">' + _esc(dept) + '</span>' +
+        '<span style="font-size:10px;color:var(--tx3)">(' + items.length + ')</span>' +
+        '<i class="fas fa-chevron-down gc" style="margin-left:auto;font-size:10px;color:var(--tx3);transition:transform .2s;transform:rotate(180deg)"></i>' +
+        '</div>' +
+        '<div id="' + gid + '">' +
+        items.map(function(t) {
+          var fClr = freqColors[t.frequency] || 'var(--tx3)';
+          var taskId = 'tsi_' + _esc(t.task_uid);
+          return '<div style="border:1px solid var(--bdr);border-radius:8px;margin-bottom:4px;background:var(--bg);overflow:hidden">' +
+            '<div class="ts-task-hd" data-tid="' + _esc(taskId) + '" style="display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer">' +
+            '<div style="width:3px;height:28px;background:' + fClr + ';border-radius:2px;flex-shrink:0"></div>' +
+            '<div style="flex:1;min-width:0">' +
+            '<div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + _esc(t.task_name) + '</div>' +
+            '<div style="font-size:10px;color:var(--tx3);margin-top:1px"><i class="fas fa-user" style="width:10px"></i> ' + _esc(t.emp_name||t.emp_id) + '</div>' +
+            '</div>' +
+            '<span style="padding:2px 7px;border-radius:6px;font-size:10px;font-weight:800;background:var(--sur2);color:' + fClr + ';">' + _esc(t.frequency||'D') + '</span>' +
+            '<i class="fas fa-chevron-down tc" style="color:var(--tx3);font-size:10px;transition:transform .2s;flex-shrink:0"></i>' +
+            '</div>' +
+            '<div id="' + taskId + '" style="display:none;padding:10px 12px;border-top:1px solid var(--bdr);background:var(--sur2)">' +
+            '<div style="font-size:11px;color:var(--tx2);margin-bottom:8px;display:flex;gap:12px;flex-wrap:wrap">' +
+            '<span><i class="fas fa-id-badge"></i> ' + _esc(t.emp_id) + '</span>' +
+            '<span><i class="fas fa-building"></i> ' + _esc(t.dept) + '</span>' +
+            '<span><i class="fas fa-repeat"></i> ' + _esc(t.frequency) + '</span>' +
+            '</div>' +
+            '<button class="btn btn-red btn-xs ts-deact-btn" data-uid="' + _esc(t.task_uid) + '" style="margin-top:2px"><i class="fas fa-trash-alt"></i> Deactivate</button>' +
+            '</div></div>';
+        }).join('') +
+        '</div></div>';
+    }).join('');
+
+    // Delegate click handlers for dept headers and task headers (no inline onclick)
+    grpEl.addEventListener('click', function(e) {
+      var dh = e.target.closest('.ts-dept-hd');
+      if (dh) {
+        var gid2 = dh.getAttribute('data-gid');
+        var body = document.getElementById(gid2);
+        if (body) {
+          var open = body.style.display !== 'none';
+          body.style.display = open ? 'none' : '';
+          var gc = dh.querySelector('.gc');
+          if (gc) gc.style.transform = open ? '' : 'rotate(180deg)';
+        }
+        return;
+      }
+      var th = e.target.closest('.ts-task-hd');
+      if (th) {
+        var tid = th.getAttribute('data-tid');
+        var detail = document.getElementById(tid);
+        if (detail) {
+          var open2 = detail.style.display !== 'none';
+          detail.style.display = open2 ? 'none' : '';
+          var tc = th.querySelector('.tc');
+          if (tc) tc.style.transform = open2 ? '' : 'rotate(180deg)';
+        }
+      }
+      var db = e.target.closest('.ts-deact-btn');
+      if (db) { _deactivateTask(db.getAttribute('data-uid')); }
+    }, { once: false });
+  }
+
+
+  function _tsRenderFiltered() {
+    // Legacy alias — re-render bar then apply filter
+    var el2 = document.getElementById('setupTaskList');
+    if (!el2) return;
+    _tsRenderBar(el2);
+    _tsApplyFilter();
+    setTimeout(function(){ _initSearchSelects(el2); }, 50);
+  }
 
   function _tsClearFilter() {
     var s = document.getElementById('tsSearch');

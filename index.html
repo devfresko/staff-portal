@@ -7878,8 +7878,13 @@
         document.querySelectorAll('.ss-list.ss-open').forEach(function(l){
           if(l!==except){
             l.classList.remove('ss-open');
-            var i=l.closest('.ss-wrap').querySelector('.ss-inp');
-            if(i){i.classList.remove('ss-open'); var a=l.closest('.ss-wrap').querySelector('.ss-arr'); if(a) a.style.transform='translateY(-50%)';}
+            l.style.cssText = '';
+            if(l._ssScrollFn){ window.removeEventListener('scroll',l._ssScrollFn,true); delete l._ssScrollFn; }
+            var w2=l.closest('.ss-wrap');
+            if(w2){
+              var inp2=w2.querySelector('.ss-inp'); if(inp2) inp2.classList.remove('ss-open');
+              var a=w2.querySelector('.ss-arr'); if(a) a.style.transform='translateY(-50%)';
+            }
           }
         });
       }
@@ -7902,10 +7907,20 @@
           var was=list.classList.contains('ss-open');
           closeAll(null);
           if(!was){
+            // Use position:fixed so dropdown escapes any transform stacking context
+            var rect = w.getBoundingClientRect();
+            list.style.cssText = 'position:fixed;left:'+rect.left+'px;top:'+(rect.bottom+4)+'px;' +
+              'width:'+Math.max(rect.width,180)+'px;z-index:99999;' +
+              'background:var(--sur);border:1px solid var(--bdr2);border-radius:12px;' +
+              'box-shadow:var(--shad3);display:flex;flex-direction:column;max-height:260px;overflow:hidden';
             list.classList.add('ss-open'); inp.classList.add('ss-open');
             var arr=w.querySelector('.ss-arr'); if(arr) arr.style.transform='translateY(-50%) rotate(180deg)';
             var si=list.querySelector('.ss-si');
             if(si){si.value=''; filter(list,''); setTimeout(function(){si.focus();},60);}
+            // Reposition on scroll
+            var _ssScrollFn = function(){ var r2=w.getBoundingClientRect(); list.style.top=(r2.bottom+4)+'px'; list.style.left=r2.left+'px'; };
+            list._ssScrollFn = _ssScrollFn;
+            window.addEventListener('scroll', _ssScrollFn, true);
           }
           e.stopPropagation(); return;
         }
@@ -8096,7 +8111,7 @@
        JSONP was failing: /exec redirects to echo endpoint (302)
        fetch POST works correctly with GAS doPost
     ══════════════════════════════════════════════════════════ */
-    var GAS_URL = 'https://script.google.com/macros/s/AKfycbws3Mur5nC1GRZkQzFddpdDv7vw7Sc0sOwOoVbhW3AA5huHrzqEVC-HoMDUQcxJt3Y/exec';
+    var GAS_URL = 'https://script.google.com/macros/s/AKfycbz3kLcx03fnDE6bbF2SMGFbi4gk7bY0Hpbf3IFD5aYAxmXWbQ-QocDcm9vYveUwQauM/exec';
     var _TOKEN  = '';
 
     var _gasActive = 0; // count of concurrent GAS calls in flight
@@ -9678,16 +9693,22 @@ function _gasX(fn, args, timeout, onOk, onErr) {
 
       root.innerHTML =
         // ── Filter bar ─────────────────────────────────────────────────
-        '<div id="cmtFilters" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:12px;padding:10px 14px;background:var(--sur2);border-radius:12px;border:1px solid var(--bdr)">' +
-        '<input type="date" id="cmtDate" class="ana-sel" style="max-width:132px" value="'+_cmtDate+'">' +
+        '<div id="cmtFilters" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;padding:10px 14px;background:var(--sur2);border-radius:12px;border:1px solid var(--bdr)">' +
+        // Single date
+        '<div style="display:flex;align-items:center;gap:5px">' +
+        '<span style="font-size:10px;font-weight:800;color:var(--tx3);text-transform:uppercase;white-space:nowrap">Date</span>' +
+        '<input type="date" id="cmtDate" class="ana-sel" style="min-width:132px" value="'+_cmtDate+'">' +
+        '</div>' +
         '<div style="width:1px;height:24px;background:var(--bdr);flex-shrink:0"></div>' +
+        // Dept + Employee + Status
         '<select id="cmtDept" class="ana-sel" style="min-width:130px"><option value="all">All Departments</option></select>' +
-        '<select id="cmtStatus" class="ana-sel" style="min-width:130px">' +
+        '<select id="cmtEmpFilter" class="ana-sel" style="min-width:140px"><option value="all">All Employees</option>' + _getEmpOptions() + '</select>' +
+        '<select id="cmtStatus" class="ana-sel" style="min-width:120px">' +
         '<option value="pending">Pending Only</option>' +
         '<option value="all">All Tasks</option>' +
         '<option value="Done">Done</option>' +
         '</select>' +
-        '<input type="text" id="cmtSearch" class="ana-sel" placeholder="Search name / task..." style="min-width:150px">' +
+        '<input type="text" id="cmtSearch" class="ana-sel" placeholder="Search name / task…" style="min-width:140px">' +
         '<div style="flex:1"></div>' +
         '<button class="btn btn-sm" onclick="_cmtReload()" style="white-space:nowrap"><i class="fas fa-rotate-right"></i> Reload</button>' +
         '</div>' +
@@ -9721,7 +9742,7 @@ function _gasX(fn, args, timeout, onOk, onErr) {
         var dateEl = document.getElementById('cmtDate');
         if (dateEl) dateEl.addEventListener('change', _cmtReload);
 
-        ['cmtDept','cmtStatus','cmtSearch'].forEach(function(id) {
+        ['cmtDept','cmtStatus','cmtSearch','cmtEmpFilter'].forEach(function(id) {
           var el = document.getElementById(id);
           if (!el) return;
           el.addEventListener('change', _renderCmtList);
@@ -9746,12 +9767,14 @@ function _gasX(fn, args, timeout, onOk, onErr) {
       var list = document.getElementById('cmtList');
       if (!list) return;
 
-      var dept   = (document.getElementById('cmtDept')  ||{}).value||'all';
-      var stFlt  = (document.getElementById('cmtStatus')||{}).value||'pending';
-      var q      = ((document.getElementById('cmtSearch')||{}).value||'').toLowerCase().trim();
+      var dept   = (document.getElementById('cmtDept')      ||{}).value||'all';
+      var empFlt = (document.getElementById('cmtEmpFilter') ||{}).value||'all';
+      var stFlt  = (document.getElementById('cmtStatus')    ||{}).value||'pending';
+      var q      = ((document.getElementById('cmtSearch')   ||{}).value||'').toLowerCase().trim();
 
       var rows = _cmtData.filter(function(r) {
-        if (dept !== 'all' && r.dept !== dept) return false;
+        if (dept   !== 'all' && r.dept   !== dept)   return false;
+        if (empFlt !== 'all' && r.emp_id !== empFlt) return false;
         if (stFlt === 'pending' && r.status === 'Done') return false;
         if (stFlt === 'Done'    && r.status !== 'Done') return false;
         if (q && (r.emp_name+' '+r.task_name+' '+r.dept).toLowerCase().indexOf(q) < 0) return false;
@@ -10302,17 +10325,58 @@ function _loadSetupTasks() {
   _gas('getDeptTasks', ['All', _today()], function(tasks) {
     var el2 = document.getElementById('setupTaskList');
     if (!el2) return;
-    var seen = {}; var list = [];
+    var seen = {}; var allList = [];
     tasks.forEach(function(t) {
-      if (!seen[t.task_uid]) { seen[t.task_uid] = true; list.push(t); }
+      if (!seen[t.task_uid]) { seen[t.task_uid] = true; allList.push(t); }
     });
-    if (!list.length) {
+    if (!allList.length) {
       el2.innerHTML = '<div class="empty-state"><i class="fas fa-tasks"></i><h4>No Active Tasks</h4><p>Add a task using the form.</p></div>';
       return;
     }
+    window._tsAllTasks = allList;
+    _tsRenderFiltered();
+  }, function(e) {
+    var el2 = document.getElementById('setupTaskList');
+    if (el2) el2.innerHTML = (e&&e.message&&e.message.indexOf('Network')>-1)
+      ? '<div style="text-align:center;padding:24px"><div style="font-size:28px;margin-bottom:8px">📡</div><div style="font-weight:700;color:var(--tx);margin-bottom:4px">Connection Error</div><button class="btn btn-sm" onclick="_forceRefresh()"><i class="fas fa-rotate-right"></i> Retry</button></div>'
+      : '<div class="te">' + _esc(e.message) + '</div>';
+  });
+}
+
+  function _tsClearFilter() {
+    var s = document.getElementById('tsSearch');
+    var e = document.getElementById('tsEmp');
+    var f = document.getElementById('tsFreq');
+    if (s) s.value = '';
+    if (e) e.value = e.options[0] ? e.options[0].value : 'all';
+    if (f) f.value = 'all';
+    // Reset ss-wrap display
+    ['tsEmp','tsFreq'].forEach(function(id) {
+      var d = document.getElementById('ssd_'+id);
+      var orig = document.getElementById(id);
+      if (d && orig && orig.options[0]) { d.value = orig.options[0].text; d.placeholder = d.value; }
+    });
+    _tsRenderFiltered();
+  }
+
+  function _tsRenderFiltered() {
+    var el2 = document.getElementById('setupTaskList');
+    if (!el2) return;
+    var list = window._tsAllTasks || [];
+    var q    = ((document.getElementById('tsSearch') || {}).value || '').toLowerCase().trim();
+    var emp  = (document.getElementById('tsEmp')    || {}).value || 'all';
+    var freq = (document.getElementById('tsFreq')   || {}).value || 'all';
+
+    var filtered = list.filter(function(t) {
+      if (q   && t.task_name.toLowerCase().indexOf(q) < 0) return false;
+      if (emp !== 'all' && t.emp_id !== emp)               return false;
+      if (freq !== 'all' && (t.frequency||'').charAt(0).toUpperCase() !== freq) return false;
+      return true;
+    });
+
     // Group by department
     var deptMap = {};
-    list.forEach(function(t) {
+    filtered.forEach(function(t) {
       var d = t.dept || 'Other';
       if (!deptMap[d]) deptMap[d] = [];
       deptMap[d].push(t);
@@ -10321,21 +10385,42 @@ function _loadSetupTasks() {
     var freqColors = { D:'var(--P)',W:'var(--V)',F:'var(--V)',M:'var(--O)','2M':'var(--O)',Q:'var(--O)','4M':'var(--O)',H:'var(--R)',Y:'var(--R)' };
 
     el2.innerHTML =
-      // Header + global expand/collapse
+      // Filter bar
+      '<div style="background:var(--sur2);border:1px solid var(--bdr);border-radius:10px;padding:10px 12px;margin-bottom:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">' +
+      '<div style="position:relative;flex:1;min-width:140px">' +
+      '<i class="fas fa-search" style="position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--tx3);font-size:11px;pointer-events:none"></i>' +
+      '<input type="text" id="tsSearch" placeholder="Search task name…" oninput="_tsRenderFiltered()" value="'+_esc(q)+'" ' +
+      'style="width:100%;padding:6px 10px 6px 28px;border:1.5px solid var(--bdr);border-radius:8px;font-size:12px;background:var(--bg);color:var(--tx);outline:none;box-sizing:border-box"></div>' +
+      '<div style="display:flex;align-items:center;gap:6px">' +
+      '<span style="font-size:10px;font-weight:800;color:var(--tx3);text-transform:uppercase;white-space:nowrap">Person</span>' +
+      '<select id="tsEmp" class="ana-sel" onchange="_tsRenderFiltered()" style="min-width:130px">' +
+      '<option value="all">All Employees</option>' + _getEmpOptions() +
+      '</select></div>' +
+      '<div style="display:flex;align-items:center;gap:6px">' +
+      '<span style="font-size:10px;font-weight:800;color:var(--tx3);text-transform:uppercase;white-space:nowrap">Freq</span>' +
+      '<select id="tsFreq" class="ana-sel" onchange="_tsRenderFiltered()" style="min-width:90px">' +
+      '<option value="all">All</option><option value="D"'+(freq==='D'?' selected':'')+'>Daily</option>' +
+      '<option value="W"'+(freq==='W'?' selected':'')+'>Weekly</option>' +
+      '<option value="F"'+(freq==='F'?' selected':'')+'>Fortnightly</option>' +
+      '<option value="M"'+(freq==='M'?' selected':'')+'>Monthly</option>' +
+      '</select></div>' +
+      '<button class="btn btn-sm btn-outline" onclick="_tsClearFilter()" title="Clear"><i class="fas fa-filter-circle-xmark"></i></button>' +
+      '</div>' +
+      // Stats row
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">' +
-      '<span style="font-size:11px;font-weight:700;color:var(--tx2)"><i class="fas fa-layer-group"></i> ' + list.length + ' tasks · ' + depts.length + ' depts</span>' +
+      '<span style="font-size:11px;font-weight:700;color:var(--tx2)"><i class="fas fa-layer-group"></i> ' + filtered.length + ' tasks · ' + depts.length + ' depts' + (filtered.length < list.length ? ' (filtered from '+list.length+')' : '') + '</span>' +
       '<div style="display:flex;gap:6px">' +
       '<button class="btn btn-xs btn-outline" onclick="_setupExpandAll(true)" style="min-width:44px;min-height:36px;touch-action:manipulation"><i class="fas fa-expand-alt"></i> All</button>' +
       '<button class="btn btn-xs btn-outline" onclick="_setupExpandAll(false)" style="min-width:44px;min-height:36px;touch-action:manipulation"><i class="fas fa-compress-alt"></i> None</button>' +
       '</div></div>' +
+      (!filtered.length ? '<div class="te" style="text-align:center;padding:24px">No tasks match the current filters</div>' :
       // Dept groups
       depts.map(function(dept) {
         var items = deptMap[dept];
         var gid = 'stg_' + dept.replace(/\s/g,'_');
         return '<div style="margin-bottom:10px">' +
-          // Group header — click to collapse/expand group
           '<div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--sur2);border-radius:8px;margin-bottom:6px;cursor:pointer" ' +
-          'onclick="event.preventDefault();var sy=document.getElementById(\'content\').scrollTop;var b=document.getElementById(\'' + gid + '\');b.style.display=b.style.display===\'none\'?\'\':\'none\';this.querySelector(\'.gc\').style.transform=b.style.display===\'none\'?\'\':\' rotate(180deg)\';document.getElementById(\'content\').scrollTop=sy;">' +
+          'onclick="event.preventDefault();var sy=document.getElementById(\'content\').scrollTop;var b=document.getElementById(\'' + gid + '\');b.style.display=b.style.display===\'none\'?\'\':\'none\';this.querySelector(\'.gc\').style.transform=b.style.display===\'none\'?\'\':\'rotate(180deg)\';document.getElementById(\'content\').scrollTop=sy;">' +
           '<i class="fas fa-building" style="color:var(--P);font-size:11px"></i>' +
           '<span style="font-size:11px;font-weight:800;color:var(--tx)">' + _esc(dept) + '</span>' +
           '<span style="font-size:10px;color:var(--tx3)">(' + items.length + ')</span>' +
@@ -10343,40 +10428,31 @@ function _loadSetupTasks() {
           '</div>' +
           '<div id="' + gid + '">' +
           items.map(function(t) {
-            var fc = freqColors[t.frequency] || 'var(--tx2)';
-            var tid = 'st_' + _esc(t.task_uid).replace(/[^a-z0-9]/gi,'_');
-            return '<div id="' + tid + '" style="background:var(--bg);border:1px solid var(--bdr);border-radius:8px;margin-bottom:5px;overflow:hidden">' +
-              // Task row header — click to expand/collapse single task
-              '<div style="padding:8px 12px;display:flex;align-items:center;gap:10px;cursor:pointer" ' +
-              'onclick="event.preventDefault();var sy=document.getElementById(\'content\').scrollTop;var b=this.nextSibling;b.style.display=b.style.display===\'none\'?\'\':\'none\';this.querySelector(\'.tc\').style.transform=b.style.display===\'none\'?\'\':\' rotate(180deg)\';document.getElementById(\'content\').scrollTop=sy;">' +
-              '<div style="width:5px;height:30px;border-radius:3px;background:' + fc + ';flex-shrink:0"></div>' +
+            var fClr = freqColors[t.frequency] || 'var(--tx3)';
+            return '<div>' +
+              '<div style="display:flex;align-items:center;gap:10px;padding:9px 12px;border:1px solid var(--bdr);border-radius:8px;margin-bottom:4px;cursor:pointer;background:var(--bg)"' +
+              ' onclick="var d=this.nextElementSibling;d.style.display=d.style.display===\'none\' ? \'\':\'none\';this.querySelector(\'.tc\').style.transform=d.style.display===\'none\'?\'\':\'rotate(180deg)\'">' +
+              '<div style="width:3px;height:28px;background:'+fClr+';border-radius:2px;flex-shrink:0"></div>' +
               '<div style="flex:1;min-width:0">' +
-              '<div style="font-size:12.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + _esc(t.task_name) + '</div>' +
-              '<div style="font-size:10px;color:var(--tx2);margin-top:2px;display:flex;gap:6px;align-items:center">' +
-              '<i class="fas fa-user" style="font-size:9px"></i><span>' + _esc(t.emp_name) + '</span>' +
-              _freqBadge(t.frequency) +
-              '</div></div>' +
-              '<i class="fas fa-chevron-down tc" style="font-size:10px;color:var(--tx3);transition:transform .2s"></i>' +
+              '<div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + _esc(t.task_name) + '</div>' +
+              '<div style="font-size:10px;color:var(--tx3);margin-top:1px"><i class="fas fa-user" style="width:10px"></i> ' + _esc(t.emp_name||t.emp_id) + '</div>' +
               '</div>' +
-              // Expanded detail
-              '<div style="display:none;padding:8px 12px 10px;border-top:1px solid var(--bdr);background:var(--sur2)">' +
+              '<span class="bdg" style="background:var(--sur2);color:'+fClr+';font-size:9px;padding:2px 7px;flex-shrink:0">' + _freqBadge(t.frequency).replace(/<[^>]+>/g,'') + '</span>' +
+              '<i class="fas fa-chevron-down tc" style="color:var(--tx3);font-size:10px;transition:transform .2s;flex-shrink:0"></i>' +
+              '</div>' +
+              '<div style="display:none;padding:8px 12px 10px;border:1px solid var(--bdr);border-top:none;border-radius:0 0 8px 8px;margin-bottom:4px;background:var(--sur2)">' +
               '<div style="font-size:11px;color:var(--tx2);margin-bottom:8px;display:flex;gap:12px;flex-wrap:wrap">' +
               '<span><i class="fas fa-id-badge"></i> ' + _esc(t.emp_id) + '</span>' +
               '<span><i class="fas fa-building"></i> ' + _esc(t.dept) + '</span>' +
               '<span><i class="fas fa-repeat"></i> ' + _esc(t.frequency) + '</span>' +
               '</div>' +
-              '<button class="btn btn-red btn-xs" onclick="_deactivateTask(\'' + _esc(t.task_uid) + '\')" style="margin-top:2px">' +
-              '<i class="fas fa-trash-alt"></i> Deactivate</button>' +
-              '</div>' +
-              '</div>';
+              '<button class="btn btn-red btn-xs" onclick="_deactivateTask(\'' + _esc(t.task_uid) + '\')" style="margin-top:2px"><i class="fas fa-trash-alt"></i> Deactivate</button>' +
+              '</div></div>';
           }).join('') +
           '</div></div>';
-      }).join('');
-  }, function(e) {
-    var el2 = document.getElementById('setupTaskList');
-    if (el2) el2.innerHTML = (e&&e.message&&e.message.indexOf('Network')>-1) ? '<div style="text-align:center;padding:24px"><div style="font-size:28px;margin-bottom:8px">📡</div><div style="font-weight:700;color:var(--tx);margin-bottom:4px">Connection Error</div><div style="font-size:12px;color:var(--tx2);margin-bottom:12px">Server se connect nahi ho pa raha</div><button class="btn btn-sm" onclick="_forceRefresh()"><i class="fas fa-rotate-right"></i> Retry</button></div>' : '<div class="te">' + _esc(e.message) + '</div>';
-  });
-}
+      }).join(''));
+  }
+
 
     function _setupExpandAll(expand) {
       // Preserve scroll position in content area
@@ -10777,7 +10853,7 @@ function _loadSetupTasks() {
         'padding:12px 14px;margin-bottom:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center">' +
 
         // Search
-        '<div style="position:relative;flex:1;min-width:160px;max-width:220px">' +
+        '<div style="position:relative;flex:1;min-width:140px;max-width:200px">' +
         '<i class="fas fa-search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--tx3);font-size:11px;pointer-events:none"></i>' +
         '<input type="text" id="dallSearch" placeholder="Search tasks…" oninput="_filterDAll(this.value)" ' +
         'style="width:100%;padding:7px 10px 7px 30px;border:1.5px solid var(--bdr);border-radius:8px;' +
@@ -10785,6 +10861,13 @@ function _loadSetupTasks() {
 
         // Divider
         '<div style="width:1px;height:28px;background:var(--bdr);flex-shrink:0"></div>' +
+
+        // Employee filter
+        '<div style="display:flex;align-items:center;gap:6px">' +
+        '<span style="font-size:10px;font-weight:800;color:var(--tx3);text-transform:uppercase;white-space:nowrap">Person</span>' +
+        '<select id="dallEmp" class="ana-sel" onchange="_loadDAllFilter()" style="min-width:130px">' +
+        '<option value="all">All People</option>' + _getEmpOptions() +
+        '</select></div>' +
 
         // Status
         '<div style="display:flex;align-items:center;gap:6px">' +
@@ -10797,9 +10880,9 @@ function _loadSetupTasks() {
         // Due date range
         '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">' +
         '<span style="font-size:10px;font-weight:800;color:var(--tx3);text-transform:uppercase;white-space:nowrap">Due</span>' +
-        '<input type="date" id="dallFrom" class="ana-sel" value="' + dfrom + '" onchange="_loadDAllFilter()" style="min-width:130px">' +
+        '<input type="date" id="dallFrom" class="ana-sel" value="' + dfrom + '" onchange="_loadDAllFilter()" style="min-width:128px">' +
         '<span style="font-size:11px;color:var(--tx3)">→</span>' +
-        '<input type="date" id="dallTo" class="ana-sel" value="' + dto + '" onchange="_loadDAllFilter()" style="min-width:130px">' +
+        '<input type="date" id="dallTo" class="ana-sel" value="' + dto + '" onchange="_loadDAllFilter()" style="min-width:128px">' +
         '</div>' +
 
         // Actions
@@ -10820,9 +10903,16 @@ function _loadSetupTasks() {
       var f = document.getElementById('dallFrom');
       var t = document.getElementById('dallTo');
       var s = document.getElementById('dallSt');
+      var emp = document.getElementById('dallEmp');
       if (f) f.value = '';
       if (t) t.value = '';
       if (s) s.value = 'All';
+      if (emp) emp.value = 'all';
+      // Also reset ss-wrap display text
+      ['dallSt','dallEmp'].forEach(function(id){
+        var d = document.getElementById('ssd_'+id);
+        if(d){ d.value = id==='dallSt'?'All':'All People'; d.placeholder = d.value; }
+      });
       _loadDAllFilter();
     }
     function _filterDAll(q) {
@@ -10835,12 +10925,14 @@ function _loadSetupTasks() {
       var st   = (document.getElementById('dallSt')   || {}).value || 'All';
       var from = (document.getElementById('dallFrom') || {}).value || '';
       var to   = (document.getElementById('dallTo')   || {}).value || '';
+      var emp  = (document.getElementById('dallEmp')  || {}).value || 'all';
       var list = document.getElementById('dallList');
       if (!list) return;
       list.innerHTML = _skel(3);
       var filters = { status: st };
-      if (from) filters.from_date = from;
-      if (to)   filters.to_date   = to;
+      if (from) filters.from_date  = from;
+      if (to)   filters.to_date    = to;
+      if (emp && emp !== 'all') filters.delegated_to = emp;
       _gas('getAllDelegations', [filters], function (dels) {
         _D.allDels = dels;
         _renderDelegCardsEl(dels, list, true);
@@ -18871,7 +18963,7 @@ function _loadSetupTasks() {
 
       // ── Header (name + month + key metrics) ───────────────────────────────
       var headerHtml =
-        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:8px;margin-bottom:18px">' +
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:8px;margin-bottom:18px">' +
         [
           { lbl:'Working Days',  val: emp.total_working_days, c:'var(--tx)',   ico:'fa-calendar-days' },
           { lbl:'Present',       val: emp.present_days,       c:'var(--G)',    ico:'fa-circle-check' },
@@ -18989,7 +19081,8 @@ function _loadSetupTasks() {
 
       var hasSalary = emp.basic_salary > 0;
       var salaryHtml = hasSalary
-        ? '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px">' +
+        ? // Responsive grid: 2 columns on desktop, 1 on mobile
+          '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:16px">' +
 
           // Earnings
           '<div style="background:var(--sur2);border-radius:10px;padding:14px;border:1px solid var(--bdr)">' +
@@ -19055,10 +19148,16 @@ function _loadSetupTasks() {
         body
       );
 
-      // Widen modal
+      // Responsive modal sizing
       setTimeout(function() {
         var m = document.getElementById('modal');
-        if (m) { m.style.maxWidth = '720px'; m.style.width = '96vw'; }
+        if (m) {
+          var isMobile = window.innerWidth <= 640;
+          m.style.maxWidth = isMobile ? '100%' : '720px';
+          m.style.width    = isMobile ? '100vw'  : '96vw';
+          m.style.margin   = isMobile ? '0'      : '';
+          m.style.borderRadius = isMobile ? '16px 16px 0 0' : '';
+        }
       }, 40);
     }
 

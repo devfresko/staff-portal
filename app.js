@@ -56,18 +56,31 @@
 
   W._fmtDate = function(s) {
     if (!s || s==='-'||s==='undefined'||s==='null') return '—';
-    try { var d=W._parseAnyDate(s); if (!d) return String(s).substring(0,16);
-      return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); } catch(e){return s;}
+    try {
+      var d=W._parseAnyDate(s); if (!d) return String(s).substring(0,16);
+      // Always show year: "8 Aug 2026"
+      return d.getDate()+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]+' '+d.getFullYear();
+    } catch(e){return s;}
   };
   W._fmtDateShort = function(s) {
     if (!s||s==='-') return '—';
-    try { var d=W._parseAnyDate(s); if (!d) return String(s).substring(0,10);
-      return d.toLocaleDateString('en-IN',{day:'2-digit',month:'short'}); } catch(e){return s;}
+    try {
+      var d=W._parseAnyDate(s); if (!d) return String(s).substring(0,10);
+      // With year always: "8 Aug 2026"
+      return d.getDate()+' '+['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()]+' '+d.getFullYear();
+    } catch(e){return s;}
   };
   W._fmtDateTime = function(s) {
     if (!s||s==='-') return '—';
-    try { var d=W._parseAnyDate(s); if (!d) return String(s).substring(0,16);
-      return d.toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:true}); } catch(e){return s;}
+    try {
+      var d=W._parseAnyDate(s); if (!d) return String(s).substring(0,16);
+      // "8 Aug 2026 11:00 AM"
+      var mn=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      var h=d.getHours(), mi=d.getMinutes();
+      var ap=h>=12?'PM':'AM', h12=h%12||12;
+      var mStr=(mi<10?'0':'')+mi;
+      return d.getDate()+' '+mn[d.getMonth()]+' '+d.getFullYear()+' '+h12+':'+mStr+' '+ap;
+    } catch(e){return s;}
   };
   W._fmtTimestamp = function(s) {
     if (!s) return '—';
@@ -112,7 +125,7 @@
     var prefix;
     if (d0.getTime()===today0.getTime()) prefix='Today';
     else if (d0.getTime()===yest0.getTime()) prefix='Yesterday';
-    else prefix=d.getDate()+' '+mn[d.getMonth()]+(d.getFullYear()!==today0.getFullYear()?' '+d.getFullYear():'');
+    else prefix=d.getDate()+' '+mn[d.getMonth()]+' '+d.getFullYear();  // always show year
     return timeStr ? prefix+' '+timeStr : prefix;
   };
 

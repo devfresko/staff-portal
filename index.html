@@ -8280,7 +8280,7 @@
        JSONP was failing: /exec redirects to echo endpoint (302)
        fetch POST works correctly with GAS doPost
     ══════════════════════════════════════════════════════════ */
-    var GAS_URL = 'https://script.google.com/macros/s/AKfycbzh2il1K1ZJT5ZUMjrZEhJhgoONc501mqm8r_e04e1ccmnWIZdqYHphQfK0RQz2Ks9o/exec';
+    var GAS_URL = 'https://script.google.com/macros/s/AKfycbz4Rg6SyX9U1_iGmJwLw28tyJof77gHWYTudXonDQjrp6XAUa94UOMmOW0U38R6edts/exec';
     var _TOKEN  = '';
 
     var _gasActive = 0; // count of concurrent GAS calls in flight
@@ -10300,6 +10300,7 @@ function _gasX(fn, args, timeout, onOk, onErr) {
         '<div id="histTable"></div>';
     }
     function _csetupForm() {
+      var todayDt = _today();
       return '<div class="csetup-grid">' +
         '<div class="card card-nohover card-sm">' +
         '<div class="sec-title" style="margin-bottom:14px"><i class="fas fa-plus-circle" style="color:var(--P)"></i> Add New Task</div>' +
@@ -10327,8 +10328,14 @@ function _gasX(fn, args, timeout, onOk, onErr) {
         '<option value="ELast">ELast — Last Weekday of Month</option>' +
         '</optgroup>' +
         '</select></div>' +
+        // Start date + time side by side
         '<div class="fgrp"><label>Start Date <span class="req">★</span></label>' +
-        '<input type="date" id="csStartDate" value="' + _today() + '"></div>' +
+        '<div style="display:flex;gap:8px;align-items:center">' +
+        '<input type="date" id="csStartDate" value="' + todayDt + '" style="flex:1">' +
+        '<div style="display:flex;flex-direction:column;gap:2px">' +
+        '<label style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;margin:0">Time <span style="font-weight:400;color:var(--tx4)">(when task should be done)</span></label>' +
+        '<input type="time" id="csTime" value="10:00" style="width:120px">' +
+        '</div></div></div>' +
         '</div>' +
         '<div id="csFreqX"></div>' +
         '<div style="margin-top:8px;padding:10px 14px;background:var(--sur2);border-radius:8px;font-size:12px;color:var(--tx2)">' +
@@ -10840,8 +10847,17 @@ function _loadSetupTasks() {
       var ex   = document.getElementById('csFreqX');
       if (!ex) return;
 
+      // Helper to get current time value
+      function tRef() {
+        var t = (document.getElementById('csTime') || {}).value || '10:00';
+        return t;
+      }
+
       if (freq === 'D') {
-        ex.innerHTML = '<div style="font-size:12px;color:var(--tx2);padding:6px 0"><i class="fas fa-info-circle"></i> Every working day from start date</div>';
+        ex.innerHTML =
+          '<div style="font-size:12px;color:var(--tx2);padding:6px 0 2px">' +
+          '<i class="fas fa-circle-info" style="color:var(--P)"></i>' +
+          ' Every working day from start date — task time: <strong id="csTimeHintD">' + tRef() + '</strong></div>';
 
       } else if (freq === 'W') {
         ex.innerHTML =
@@ -10851,16 +10867,23 @@ function _loadSetupTasks() {
           '<option value="3">Wednesday</option><option value="4">Thursday</option>' +
           '<option value="5">Friday</option><option value="6">Saturday</option>' +
           '<option value="0">Sunday</option>' +
-          '</select></div>';
+          '</select></div>' +
+          '<div style="font-size:11px;color:var(--tx3);margin-top:2px">' +
+          '<i class="fas fa-clock"></i> Task time from the time field above</div>';
 
       } else if (freq === 'F') {
-        ex.innerHTML = '<div style="font-size:12px;color:var(--tx2);padding:6px 0"><i class="fas fa-info-circle"></i> Every 2 weeks (fortnightly) from start date</div>';
+        ex.innerHTML =
+          '<div style="font-size:12px;color:var(--tx2);padding:6px 0 2px">' +
+          '<i class="fas fa-circle-info" style="color:var(--P)"></i>' +
+          ' Every 2 weeks (fortnightly) from start date — task time: <strong>' + tRef() + '</strong></div>';
 
       } else if (['M','2M','Q','4M','H','Y'].indexOf(freq) > -1) {
         var freqLabels = { M:'Monthly', '2M':'Every 2 Months', Q:'Quarterly', '4M':'Every 4 Months', H:'Half Yearly', Y:'Yearly' };
         ex.innerHTML =
           '<div class="fgrp"><label>Day of Month (1–28) <span style="font-size:11px;color:var(--tx3)">— for ' + (freqLabels[freq]||freq) + '</span></label>' +
-          '<input type="number" id="csDom" min="1" max="28" value="1" placeholder="e.g. 1 = 1st of every month"></div>';
+          '<input type="number" id="csDom" min="1" max="28" value="1" placeholder="e.g. 1 = 1st of every month"></div>' +
+          '<div style="font-size:11px;color:var(--tx3);margin-top:2px">' +
+          '<i class="fas fa-clock"></i> Task time from the time field above</div>';
 
       } else if (['E1st','E2nd','E3rd','E4th','ELast'].indexOf(freq) > -1) {
         var nth = { E1st:'1st', E2nd:'2nd', E3rd:'3rd', E4th:'4th', ELast:'Last' };
@@ -10871,9 +10894,10 @@ function _loadSetupTasks() {
           '<option value="3">Wednesday</option><option value="4">Thursday</option>' +
           '<option value="5">Friday</option><option value="6">Saturday</option>' +
           '<option value="0">Sunday</option>' +
-          '</select>' +
-          '</div>' +
-          '<div style="font-size:12px;color:var(--tx2);padding:4px 0"><i class="fas fa-info-circle"></i> e.g. E1st + Monday = First Monday of every month</div>';
+          '</select></div>' +
+          '<div style="font-size:11px;color:var(--tx3);margin-top:2px">' +
+          '<i class="fas fa-clock"></i> Task time from the time field above' +
+          ' &nbsp;·&nbsp; e.g. ' + nth[freq] + ' Monday each month</div>';
 
       } else {
         ex.innerHTML = '';
@@ -10887,6 +10911,7 @@ function _loadSetupTasks() {
       var taskInp    = document.getElementById('csTask');
       var freqSel    = document.getElementById('csFreq');
       var startInp   = document.getElementById('csStartDate');
+      var timeInp    = document.getElementById('csTime');
 
       var empId      = sel        ? sel.value.trim()        : '';
       var empOpt     = sel        ? sel.options[sel.selectedIndex] : null;
@@ -10895,12 +10920,14 @@ function _loadSetupTasks() {
       var email      = empOpt     ? (empOpt.getAttribute('data-email') || '') : '';
       var task       = taskInp    ? taskInp.value.trim()     : '';
       var freq       = freqSel    ? freqSel.value            : 'D';
-      var startDate = startInp ? startInp.value : _today();
+      var startDate  = startInp   ? startInp.value           : _today();
+      var taskTime   = timeInp    ? (timeInp.value || '10:00') : '10:00';
 
       if (!_req(empId,     'Employee'))   { _endSub('btnSaveTask'); return; }
       if (!_req(task,      'Task Name'))  { _endSub('btnSaveTask'); return; }
       if (!_req(startDate, 'Start Date')) { _endSub('btnSaveTask'); return; }
 
+      // Send datetime-local format so backend extracts date + time together
       var obj = {
         emp_id:     empId,
         emp_name:   empName.split(' (')[0],
@@ -10908,7 +10935,8 @@ function _loadSetupTasks() {
         email:      email,
         task_name:  task,
         frequency:  freq,
-        start_date: startDate
+        start_date: startDate + 'T' + taskTime,   // e.g. "2026-08-10T10:30"
+        task_time:  taskTime                       // explicit time field
       };
 
       // Attach extra params based on frequency
@@ -10931,6 +10959,7 @@ function _loadSetupTasks() {
     }
     if (taskInp) taskInp.value = '';
     if (startInp) startInp.value = _today();
+    if (timeInp) timeInp.value = '10:00';
     document.getElementById('csFreqX').innerHTML = '';
     _loadSetupTasks();
   } else {

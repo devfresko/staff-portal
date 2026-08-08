@@ -7660,12 +7660,14 @@
       return isNaN(d3.getTime()) ? null : d3;
     }
 
+    var _MN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     function _fmtDate(s) {
       if (!s || s === '-' || s === 'undefined' || s === 'null') return '—';
       try {
         var d = _parseAnyDate(s);
         if (!d) return String(s).substring(0, 16);
-        return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        // "8 Aug 2026"
+        return d.getDate() + ' ' + _MN[d.getMonth()] + ' ' + d.getFullYear();
       } catch (e) { return s; }
     }
     function _fmtDateShort(s) {
@@ -7673,7 +7675,8 @@
       try {
         var d = _parseAnyDate(s);
         if (!d) return String(s).substring(0, 10);
-        return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short' });
+        // "8 Aug 2026" — always show year
+        return d.getDate() + ' ' + _MN[d.getMonth()] + ' ' + d.getFullYear();
       } catch (e) { return s; }
     }
     function _fmtDateTime(s) {
@@ -7681,14 +7684,18 @@
       try {
         var d = _parseAnyDate(s);
         if (!d) return String(s).substring(0, 16);
-        return d.toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true });
+        // "8 Aug 2026 11:00 AM"
+        var h = d.getHours(), mi = d.getMinutes();
+        var ap = h >= 12 ? 'PM' : 'AM', h12 = h % 12 || 12;
+        return d.getDate() + ' ' + _MN[d.getMonth()] + ' ' + d.getFullYear() +
+          ' ' + h12 + ':' + (mi < 10 ? '0' : '') + mi + ' ' + ap;
       } catch (e) { return s; }
     }
     function _fmtTimestamp(s) {
       if (!s) return '—';
       try {
-        var d = new Date(String(s).replace(' ', 'T'));
-        if (isNaN(d.getTime())) return s;
+        var d = _parseAnyDate(s);
+        if (!d) return String(s).substring(0, 16);
         var now = new Date();
         var diff = now - d;
         if (diff < 60000) return 'Just now';
@@ -10134,12 +10141,11 @@ function _gasX(fn, args, timeout, onOk, onErr) {
       var today0 = new Date(); today0.setHours(0,0,0,0);
       var yest0  = new Date(today0); yest0.setDate(today0.getDate() - 1);
       var d0     = new Date(d); d0.setHours(0,0,0,0);
-      var mn = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
       var prefix;
       if (d0.getTime() === today0.getTime())    prefix = 'Today';
       else if (d0.getTime() === yest0.getTime()) prefix = 'Yesterday';
-      else prefix = d.getDate() + ' ' + mn[d.getMonth()] + (d.getFullYear() !== today0.getFullYear() ? ' ' + d.getFullYear() : '');
+      else prefix = d.getDate() + ' ' + _MN[d.getMonth()] + ' ' + d.getFullYear(); // always year
 
       return timeStr ? prefix + ' ' + timeStr : prefix;
     }
@@ -11502,10 +11508,10 @@ function _loadSetupTasks() {
                 (isOut ?
                   '<span><i class="fas fa-user-check"></i> To: <strong>' + _esc(d.delegated_to_name || d.delegated_to) + '</strong></span>' :
                   '<span><i class="fas fa-user"></i> By: <strong>' + _esc(d.delegated_by_name || d.delegated_by) + '</strong></span>') +
-                '<span style="color:var(--P);font-weight:700"><i class="fas fa-calendar-clock" style="color:var(--P)"></i> <strong>Plan Date:</strong> ' + _fmtDate(d.first_date) + '</span>' +
+                '<span style="color:var(--P);font-weight:700"><i class="fas fa-calendar-plus" style="color:var(--P)"></i> <strong>Assigned:</strong> ' + _fmtDate(d.first_date) + '</span>' +
                 '<span style="color:var(--O);font-weight:700"><i class="fas fa-flag-checkered" style="color:var(--O)"></i> <strong>Due:</strong> ' + _fmtDate(d.final_date) + '</span>' +
-                (d.status === 'Completed' && (d.completed_at || d.updated_at)
-                  ? '<span style="color:var(--G);font-weight:700"><i class="fas fa-check-circle" style="color:var(--G)"></i> <strong>Actual:</strong> ' + _tsShort(d.completed_at || d.updated_at) + '</span>'
+                (d.status === 'Completed' && d.completed_at
+                  ? '<span style="color:var(--G);font-weight:700"><i class="fas fa-check-circle" style="color:var(--G)"></i> <strong>Completed:</strong> ' + _fmtDate(d.completed_at) + '</span>'
                   : (d.status !== 'Completed' ? '<span>' + dlTxt + '</span>' : '')) +
                 (d.revision_1 ? '<span style="color:var(--V)"><i class="fas fa-calendar-days"></i> Rev1: ' + _fmtDate(d.revision_1) + '</span>' : '') +
                 (d.revision_2 ? '<span style="color:var(--V)"><i class="fas fa-calendar-days"></i> Rev2: ' + _fmtDate(d.revision_2) + '</span>' : '') +
@@ -16661,6 +16667,7 @@ function _loadSetupTasks() {
         '<option value="trend">Trends &amp; Patterns</option>' +
         '<option value="late">Late Arrivals</option>' +
         '<option value="detail">📅 Detailed Log</option>' +
+        '<option value="muster">🗂️ Muster Grid</option>' +
         '</select>' +
         '<select id="attSort" class="ana-sel" style="min-width:110px" onchange="_renderAtt()">' +
         '<option value="pct_desc">Presence % ↓</option><option value="pct_asc">Presence % ↑</option>' +
@@ -16701,33 +16708,109 @@ function _loadSetupTasks() {
       _loadAtt();
     }
 
-    // ── Attendance Analytics Export functions ─────────────────────────────
+    // ── Muster Grid embedded in Attendance Analytics ─────────────────────────
+    function _loadAttMusterInline(month, dept) {
+      var root = document.getElementById('attRoot');
+      if (!root) return;
+      root.innerHTML = _skel(6);
+      _gas('getMusterGrid', [dept || 'All', month || _currMonth()], function(res) {
+        res = res || {};
+        var allRows = res.rows || [], dates = res.dates || [], hols = res.holidays || {};
+
+        if (!allRows.length) {
+          root.innerHTML = '<div class="empty-state"><i class="fas fa-calendar-xmark"></i><h4>No Data</h4><p>No muster records for ' + month + '</p></div>';
+          return;
+        }
+        _D.musterData = allRows;
+
+        // KPI strip
+        var totP=0, totHD=0, totA=0, totWO=0, totHol=0;
+        allRows.forEach(function(r){ totP+=r.days_present||0; totHD+=r.days_hd||0; totA+=r.days_absent||0; totWO+=r.days_wo||0; totHol+=r.days_hol||0; });
+        var wd=totP+totHD*0.5+totA, avgPct=wd>0?Math.round((totP+totHD*0.5)/wd*100):0;
+        var kpis = [
+          {lbl:'Employees',val:allRows.length,c:'var(--P)',ico:'fa-users'},
+          {lbl:'Present',val:totP,c:'var(--G)',ico:'fa-calendar-check'},
+          {lbl:'Half Day',val:totHD,c:'var(--O)',ico:'fa-clock'},
+          {lbl:'Absent',val:totA,c:'var(--R)',ico:'fa-calendar-times'},
+          {lbl:'Avg Presence',val:avgPct+'%',c:avgPct>=80?'var(--G)':avgPct>=60?'var(--O)':'var(--R)',ico:'fa-chart-pie'}
+        ];
+        var kHtml = '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px">' +
+          kpis.map(function(k){
+            return '<div style="flex:1;min-width:100px;padding:10px 14px;background:var(--sur2);border:1.5px solid var(--bdr);border-radius:12px;border-left:3px solid '+k.c+'">' +
+              '<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px"><i class="fas '+k.ico+'" style="color:'+k.c+';font-size:12px"></i><div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase">'+k.lbl+'</div></div>' +
+              '<div style="font-size:18px;font-weight:900;color:'+k.c+'">'+k.val+'</div></div>';
+          }).join('') + '</div>';
+
+        // Search + export bar
+        var barHtml = '<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap">' +
+          '<input type="text" id="attMustSearch" placeholder="Search employee…" oninput="_filterMuster(this.value)" ' +
+          'style="flex:1;min-width:160px;padding:6px 10px;border:1.5px solid var(--bdr);border-radius:8px;font-size:12px;background:var(--bg);color:var(--tx);outline:none">' +
+          '<button class="btn btn-sm btn-outline" onclick="_exportMuster()"><i class="fas fa-download"></i> Export CSV</button>' +
+          '</div>';
+
+        // Grid table
+        var colStatusMap = { P:'var(--G)', HD:'var(--O)', A:'var(--R)', WO:'var(--tx3)', H:'#7c3aed', L:'#a16207' };
+        var colLblMap   = { P:'P', HD:'½', A:'A', WO:'W', H:'H', L:'L' };
+        var tblHtml = '<div style="overflow-x:auto"><table class="muster-tbl" id="mstrGridTable"><thead><tr>' +
+          '<th class="mst-emp">Employee</th><th class="mst-pct">%</th>' +
+          dates.map(function(dt){
+            var d=new Date(dt+'T00:00:00'); var dow=d.getDay();
+            var isH=hols[dt]||false;
+            var bg=isH?'#e0e7ff':(dow===0||dow===6)?'var(--sur3)':'';
+            return '<th class="mst-day" style="'+(bg?'background:'+bg+';':'')+'"><div>'+['Su','Mo','Tu','We','Th','Fr','Sa'][dow]+'</div><div style="font-size:9px">'+d.getDate()+'</div></th>';
+          }).join('') +
+          '<th style="text-align:center;min-width:40px">P</th><th style="text-align:center;min-width:40px">A</th>' +
+          '</tr></thead><tbody id="mstrBody">' +
+          allRows.map(function(r){
+            var pct=r.pct||0, pClr=pct>=80?'var(--G)':pct>=60?'var(--O)':'var(--R)';
+            return '<tr class="mstr-row">' +
+              '<td class="mst-emp"><div style="font-weight:700;font-size:12px">'+_esc(r.emp_name||'')+'</div><div style="font-size:10px;color:var(--tx3)">'+_esc(r.dept||'')+'</div></td>' +
+              '<td class="mst-pct" style="color:'+pClr+';font-size:11px">'+pct+'%</td>' +
+              dates.map(function(dt){
+                var cell=r.days&&r.days[dt]?r.days[dt]:'';
+                var c=colStatusMap[cell]||'var(--tx3)'; var lbl=colLblMap[cell]||'·';
+                return '<td class="mst-cell" style="color:'+c+'">'+lbl+'</td>';
+              }).join('') +
+              '<td class="mst-cell" style="color:var(--G);font-weight:900">'+(r.days_present||0)+'</td>' +
+              '<td class="mst-cell" style="color:var(--R);font-weight:900">'+(r.days_absent||0)+'</td>' +
+              '</tr>';
+          }).join('') +
+          '</tbody></table></div>';
+
+        root.innerHTML = kHtml + barHtml + tblHtml;
+        // show export buttons
+        var sb = document.getElementById('attExpSummBtn'); var db = document.getElementById('attExpDetBtn');
+        if (sb) sb.style.display = 'none'; if (db) db.style.display = 'none';
+      }, function(e) {
+        if (root) root.innerHTML = '<div class="te"><i class="fas fa-exclamation-triangle"></i> ' + _esc(e.message) + '</div>';
+      });
+    }
     function _attExportSumm() {
       var data = _D.attData;
-      if (!data || !data.employees || !data.employees.length) { _toast('Load attendance data first', 'warn'); return; }
+      if (!data || !data.by_employee || !data.by_employee.length) {
+        _toast('Pehle Analyze button dabao', 'warn'); return;
+      }
       function q(v){ return '"'+String(v===null||v===undefined?'':v).replace(/"/g,'""')+'"'; }
-      var DAY_N = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-      var head = ['Emp ID','Name','Department','From','To','Working Days','Present','Half Day','Absent','Week Off','Holiday','LWP','Payable Days','Attendance %','Avg Hours/Day'];
+      var head = ['Emp ID','Name','Department','From','To','Working Days','Present','Half Day','Absent','Week Off','Holiday','Late','Attendance %','Avg Hours/Day'];
       var rows = [head.map(q).join(',')];
-      (data.employees || []).forEach(function(e) {
-        var wd = (e.present_days||0) + (e.half_days||0)*0.5 + (e.absent_days||0);
-        var pct = wd > 0 ? Math.round(((e.present_days||0) + (e.half_days||0)*0.5) / wd * 100) : 0;
+      data.by_employee.forEach(function(e) {
+        var wd = (e.present||0) + (e.half_day||0)*0.5 + (e.absent||0);
+        var pct = e.presence_pct != null ? e.presence_pct : (wd > 0 ? Math.round(((e.present||0) + (e.half_day||0)*0.5) / wd * 100) : 0);
         rows.push([
-          e.emp_id, e.emp_name, e.dept,
+          e.emp_id||'', e.name||'', e.dept||'',
           data.from||'', data.to||'',
-          wd, e.present_days||0, e.half_days||0, e.absent_days||0,
-          e.week_off_days||0, e.holiday_days||0, e.lwp_days||0,
-          (e.present_days||0) + (e.half_days||0)*0.5 + (e.leave_days||0),
+          wd, e.present||0, e.half_day||0, e.absent||0,
+          e.week_off||0, e.holiday||0, e.late||0,
           pct+'%',
-          e.avg_hours ? (Math.round(e.avg_hours*10)/10)+'h' : '—'
+          e.avg_hours != null ? (Math.round((e.avg_hours||0)*10)/10)+'h' : '—'
         ].map(q).join(','));
       });
       var csv = rows.join('\n');
       var a = document.createElement('a');
       a.href = 'data:text/csv;charset=utf-8,\uFEFF' + encodeURIComponent(csv);
-      a.download = 'attendance_summary_' + _today() + '.csv';
+      a.download = 'attendance_summary_' + (data.from||_today()) + '_to_' + (data.to||_today()) + '.csv';
       a.click();
-      _toast('Attendance summary exported!', 'ok');
+      _toast('Attendance summary exported — ' + data.by_employee.length + ' employees!', 'ok');
     }
 
     function _attExportDetail() {
@@ -16785,6 +16868,13 @@ function _loadSetupTasks() {
       // Detailed Log view — load attendance records directly, not analytics summary
       if (view === 'detail') {
         _loadAttDetailedLog(from, to, dept, emp, status);
+        return;
+      }
+
+      // Muster Grid view — use getMusterGrid (needs month, not from/to)
+      if (view === 'muster') {
+        var musterMonth = from.substring(0, 7); // yyyy-MM
+        _loadAttMusterInline(musterMonth, dept === 'all' ? 'All' : dept);
         return;
       }
 
@@ -17996,14 +18086,13 @@ function _loadSetupTasks() {
             _freqBadge(t.frequency) +
             (isTransOut ? '<span style="padding:2px 8px;border-radius:10px;background:var(--Ol);color:var(--O);font-weight:700;font-size:10.5px"><i class="fas fa-share"></i> Transferred away</span>' : '') +
             (isReceived ? '<span style="padding:2px 8px;border-radius:10px;background:var(--Vl);color:var(--V);font-weight:700;font-size:10.5px"><i class="fas fa-arrow-right-arrow-left"></i> Transferred to you</span>'+(t.transfer_by?'<span style="color:var(--tx3);font-size:10.5px"> by '+_esc(t.transfer_by)+'</span>':'') : '') +
-            (isDone&&actualFmt?'<span style="color:var(--G);font-weight:600"><i class="fas fa-check-circle"></i> '+actualFmt+'</span>':'') +
-            // ── Fix 4: Remark — show always (Done & Pending) ─────────────────
+            // Remark — always show
             (t.remark?'<span style="padding:2px 8px;border-radius:8px;background:var(--Il);color:var(--I);font-size:10.5px;font-weight:600"><i class="fas fa-comment-dots"></i> '+_esc(t.remark)+'</span>':'') +
-            // ── Fix 5: Plan vs Actual with clear header labels ───────────────
-            '<div style="display:flex;gap:8px;margin-top:3px;flex-wrap:wrap;align-items:center">' +
-            (planFmt ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:7px;background:var(--Pl);color:var(--P);font-size:10px;font-weight:800"><i class="fas fa-calendar-clock" style="font-size:9px"></i> Plan: <strong>' + _esc(planFmt) + '</strong></span>' : '') +
-            (actualFmt ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:7px;background:var(--Gl);color:var(--G);font-size:10px;font-weight:800"><i class="fas fa-check-circle" style="font-size:9px"></i> Actual: <strong>' + actualFmt + '</strong></span>' :
-              (planFmt && !isDone ? '<span style="padding:1px 8px;border-radius:7px;background:var(--sur2);color:var(--tx3);font-size:10px">Actual: pending</span>' : '')) +
+            // Plan vs Actual — always show both, Actual "pending" if not done
+            '<div style="display:flex;gap:8px;margin-top:4px;flex-wrap:wrap;align-items:center">' +
+            (planFmt ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:8px;background:var(--Pl);color:var(--P);font-size:10.5px;font-weight:800"><i class="fas fa-calendar-clock" style="font-size:10px"></i> Plan: <strong>' + _esc(planFmt) + '</strong></span>' : '') +
+            (actualFmt ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 9px;border-radius:8px;background:var(--Gl);color:var(--G);font-size:10.5px;font-weight:800"><i class="fas fa-check-circle" style="font-size:10px"></i> Actual: <strong>' + actualFmt + '</strong></span>' :
+              (planFmt && !isDone ? '<span style="padding:2px 9px;border-radius:8px;background:var(--sur2);color:var(--tx3);font-size:10.5px;border:1px solid var(--bdr)">Actual: pending</span>' : '')) +
             '</div>' +
             '</div></div>' +
             '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0">' +

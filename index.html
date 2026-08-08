@@ -10722,9 +10722,22 @@ function _loadSetupTasks() {
         items.map(function(t) {
           var fClr = freqColors[t.frequency] || 'var(--tx3)';
           var taskId = 'tsi_' + _esc(t.task_uid);
-          // day_label from backend e.g. "Monday · 10:30 AM" or "1st · 09:00 AM"
-          // Show Plan time badge — this is the planned schedule time
-          var planLabel = t.day_label ? _esc(t.day_label) : '';
+          // day_label from backend: "Daily · 1:00 PM", "Monday · 10:30 AM", or old ISO "2026-03-31T18:30:00.000Z"
+          var rawLabel = t.day_label || '';
+          var planLabel = '';
+          if (rawLabel) {
+            // Old format: ISO datetime string from un-fixed Day/Date column
+            if (rawLabel.indexOf('T') > 0 || rawLabel.match(/^\d{4}-\d{2}-\d{2}/)) {
+              var pdOld = _parseAnyDate(rawLabel);
+              if (pdOld && !isNaN(pdOld)) {
+                var ph = pdOld.getHours(), pm = pdOld.getMinutes();
+                planLabel = (ph % 12 || 12) + ':' + (pm < 10 ? '0' : '') + pm + (ph >= 12 ? ' PM' : ' AM');
+              }
+            }
+            // "Daily · 1:00 PM" or "Monday · 10:30 AM" — show as-is (already clean)
+            else { planLabel = rawLabel; }
+          }
+          planLabel = planLabel ? _esc(planLabel) : '';
           return '<div style="border:1px solid var(--bdr);border-radius:8px;margin-bottom:4px;background:var(--bg);overflow:hidden">' +
             '<div class="ts-task-hd" data-tid="' + _esc(taskId) + '" style="display:flex;align-items:center;gap:10px;padding:10px 12px;cursor:pointer">' +
             '<div style="width:3px;height:28px;background:' + fClr + ';border-radius:2px;flex-shrink:0"></div>' +
